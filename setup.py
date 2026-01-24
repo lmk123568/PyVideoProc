@@ -2,7 +2,7 @@ import os
 import subprocess
 
 from setuptools import setup
-from torch.utils.cpp_extension import BuildExtension, CUDAExtension
+from torch.utils.cpp_extension import BuildExtension, CUDAExtension, library_paths
 
 MODULE_NAME = "nv"
 
@@ -45,6 +45,15 @@ include_dirs = list(set(include_dirs))
 library_dirs = list(set(library_dirs))
 libraries = list(set(libraries))
 
+rpath_dirs = []
+for p in library_paths():
+    if p not in rpath_dirs:
+        rpath_dirs.append(p)
+
+extra_link_args = []
+for p in rpath_dirs:
+    extra_link_args.append(f"-Wl,-rpath,{p}")
+
 print(f"Include dirs: {include_dirs}")
 print(f"Library dirs: {library_dirs}")
 print(f"Libraries: {libraries}")
@@ -64,6 +73,7 @@ setup(
             library_dirs=library_dirs,
             libraries=libraries,
             extra_compile_args={"cxx": ["-std=c++17"], "nvcc": ["-O3"]},
+            extra_link_args=extra_link_args,
         )
     ],
     cmdclass={"build_ext": BuildExtension},
