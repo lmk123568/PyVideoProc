@@ -1,29 +1,77 @@
-# PyNvVideoPipe: 全流程 GPU 视频处理框架 (Full-Process GPU Video Pipeline)
+# PyNvVideoPipe
 
-PyNvVideoPipe 是一个专为高性能计算机视觉任务设计的 Python 框架，旨在通过**全流程 GPU 驻留**彻底消除 CPU-GPU 数据传输瓶颈。
+![License](https://img.shields.io/badge/license-BSD_2_Clause-blue.svg?style=for-the-badge)![CUDA](https://img.shields.io/badge/NVIDIA_CUDA-Optimized-76B900?logo=nvidia&logoColor=white&style=for-the-badge)![Platform](https://img.shields.io/badge/platform-Linux-77216F?logo=linux&logoColor=white&style=for-the-badge)
 
-传统的视频分析流水线（Decode -> CPU -> GPU Inference -> CPU -> Encode）往往因为频繁的内存拷贝而受限于带宽和延迟。PyNvVideoPipe 通过深度集成 NVIDIA 硬件编解码能力与 PyTorch/TensorRT 生态，实现了从视频摄取到最终推流的**零拷贝 (Zero-Copy)** 处理。
+High-Performance Video Processing Pipeline in Python, Powered by NVIDIA CUDA
 
-## ✨ 核心特性 (Key Features)
+Supports multi-stream, multi-GPU, and multi-model inference
 
-*   **🚀 全流程 GPU 操作 (End-to-End GPU Pipeline)**
-    视频帧从解码开始，经过预处理、推理、追踪、绘图，直到最终编码输出，数据始终驻留在显存 (VRAM) 中。
+Minimizes memory copies and CPU–GPU data transfers for maximum efficiency
 
-*   **🎥 硬件解码 (Hardware Decoding)**
-    基于 FFmpeg 与 NVIDIA NVDEC 的 C++ 绑定，直接将 RTSP/本地视频流解码为 GPU Tensors，无缝对接 PyTorch。
+基于 NVIDIA CUDA 的 Python 高性能视频处理流水线实现
 
-*   **⚡ TensorRT 推理 (TensorRT Inference)**
-    内置高性能 TensorRT 后端，支持 YOLO 等主流模型（FP16/INT8），充分释放 Tensor Core 算力，实现毫秒级检测。
+支持多路视频流、多 GPU 与多模型推理
 
-*   **🎯 目标跟踪 (Object Tracking)**
-    支持接入 GPU 优化的跟踪算法，在显存中直接处理检测结果，维持超高帧率的实时跟踪。
+最大限度减少内存拷贝和 CPU–GPU 数据传输，提升整体效率
 
-*   **🎨 GPU 绘图 (On-GPU Drawing)**
-    利用 CUDA/NPP 在 GPU 上直接绘制检测框 (Bounding Boxes) 和元数据，避免了回传 CPU 使用 OpenCV 绘图的巨大性能开销。
+|            | Open开源 | Learning Curve学习成本           | Developer-Friendliness二次开发友好 | Performance性能 |
+| ---------- | -------- | -------------------------------- | ---------------------------------- | --------------- |
+| DeepStream | NO       | High                             | Low                                | High            |
+| VideoPipe  | YES      | medium（requires C++ knowledge） | High                               | Medium          |
+| our        | YES      | ≈ 0                              | High +++++++++++                   | Medium ---      |
 
-*   **💾 硬件编码 (Hardware Encoding)**
-    处理完成的画面直接调用 NVENC 进行硬件编码并推流，极大降低 CPU 占用。
+### Quick Start
 
-## 🛠️ 快速开始 (Quick Start)
+1. 环境准备
 
-(这里可以补充安装和运行代码示例)
+   推荐 docker 运行，不推荐自己本地装环境
+
+   ```bash
+   cd docker
+   docker build -t PyNvVideoPipe:cuda12.6 .
+   ```
+
+   镜像生成后，进入容器，不报错即成功
+
+   ```bash
+   docker run -it --gpus all -e NVIDIA_DRIVER_CAPABILITIES=all \
+     -v {your_path}/PyNvVideoPipe:/workspace \
+     PyNvVideoPipe:cuda12.6 \
+     bash
+   ```
+
+   编译硬件加速库实现
+
+   ```bash
+   python setup.py build --inplace
+   ```
+
+2. 视觉模型导入
+
+   将通过 [ultralytics](https://github.com/ultralytics/ultralytics) 训练的模型导入到`yolo26`目录下
+
+   ```bash
+   cd yolo26
+   python pt2trt.py  --w yolo26n.pt --fp16
+   ```
+
+   🚀 推理尺寸固定为`(576,1024)`，跳过`letterbox`降低计算开销
+
+3. 运行
+
+   修改并理解`main.py`
+
+   ```bash
+   python main.py
+   ```
+
+### Notes
+
+- 更多细节和技巧请阅读 `main.py` 注释
+- 大简之道是最美的艺术，没有之一
+- 工程不是追求完美的数学解，而是在资源受限、时间紧迫、需求模糊的情况下，寻找一个可用的最优解
+
+### License
+
+[BSD 2 Clause](https://github.com/lmk123568/PyNvVideoPipe/blob/main/LICENSE)
+
