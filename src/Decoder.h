@@ -29,7 +29,10 @@ public:
             int                read_timeout_ms       = 5000,
             int                buffer_size           = 4 * 1024 * 1024,
             int                max_delay_ms          = 200,
-            int                reorder_queue_size    = 0);
+            int                reorder_queue_size    = 0,
+            int                decoder_threads       = 2,
+            int                surfaces             = 2,
+            std::string        hwaccel              = "cuda");
     ~Decoder();
 
     std::pair<torch::Tensor, double> next_frame();
@@ -71,6 +74,9 @@ private:
     int         buffer_size         = 4 * 1024 * 1024;
     int         max_delay_ms        = 200;
     int         reorder_queue_size  = 0;
+    int         decoder_threads     = 2;
+    int         surfaces            = 2;
+    std::string hwaccel             = "cuda";
     int         reconnect_attempts  = 0;
     bool        is_streaming_source = false;
     double      last_input_pts      = -1.0;

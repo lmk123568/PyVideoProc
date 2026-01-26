@@ -7,6 +7,7 @@
 #include <nppi_color_conversion.h>
 #include <nppi_geometry_transforms.h>
 
+#include <algorithm>
 #include <chrono>
 #include <stdexcept>
 #include <thread>
@@ -31,7 +32,10 @@ Decoder::Decoder(const std::string& filename,
                  int                read_timeout_ms_,
                  int                buffer_size_,
                  int                max_delay_ms_,
-                 int                reorder_queue_size_)
+                 int                reorder_queue_size_,
+                 int                decoder_threads_,
+                 int                surfaces_,
+                 std::string        hwaccel_)
     : source_url(filename),
       requested_width(output_width),
       requested_height(output_height),
@@ -44,7 +48,10 @@ Decoder::Decoder(const std::string& filename,
       read_timeout_ms(read_timeout_ms_),
       buffer_size(buffer_size_),
       max_delay_ms(max_delay_ms_),
-      reorder_queue_size(reorder_queue_size_) {
+      reorder_queue_size(reorder_queue_size_),
+      decoder_threads(decoder_threads_),
+      surfaces(surfaces_),
+      hwaccel(std::move(hwaccel_)) {
     init_ffmpeg(filename);
 }
 
@@ -53,6 +60,7 @@ Decoder::~Decoder() {
 }
 
 void Decoder::init_ffmpeg(const std::string& filename) {
+    av_log_set_level(AV_LOG_INFO);
     AVDictionary* opts  = nullptr;
     is_streaming_source = false;
     if (filename.rfind("rtsp://", 0) == 0) {
@@ -93,6 +101,7 @@ void Decoder::init_ffmpeg(const std::string& filename) {
     if (avformat_find_stream_info(format_ctx, nullptr) < 0) {
         throw std::runtime_error("[Decoder] Could not find stream info");
     }
+    av_dump_format(format_ctx, 0, filename.c_str(), 0);
 
     video_stream_idx = av_find_best_stream(format_ctx, AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0);
     if (video_stream_idx < 0) {
@@ -127,11 +136,23 @@ void Decoder::init_ffmpeg(const std::string& filename) {
         throw std::runtime_error("[Decoder] Could not copy codec params");
     }
 
-    if (av_hwdevice_ctx_create(&hw_device_ctx, AV_HWDEVICE_TYPE_CUDA, nullptr, nullptr, 0) < 0) {
-        throw std::runtime_error("[Decoder] Failed to create CUDA HW device");
+    if (decoder_threads <= 0) {
+        decoder_threads = 2;
     }
-    codec_ctx->hw_device_ctx = av_buffer_ref(hw_device_ctx);
-    codec_ctx->get_format    = get_hw_format;
+    codec_ctx->thread_count = decoder_threads;
+    codec_ctx->thread_type  = FF_THREAD_FRAME;
+
+    if (surfaces < 2) surfaces = 2;
+    if (surfaces > 5) surfaces = 5;
+
+    if (hwaccel == "cuda") {
+        if (av_hwdevice_ctx_create(&hw_device_ctx, AV_HWDEVICE_TYPE_CUDA, nullptr, nullptr, 0) < 0) {
+            throw std::runtime_error("[Decoder] Failed to create CUDA HW device");
+        }
+        codec_ctx->hw_device_ctx   = av_buffer_ref(hw_device_ctx);
+        codec_ctx->get_format      = get_hw_format;
+        codec_ctx->extra_hw_frames = surfaces;
+    }
 
     if (avcodec_open2(codec_ctx, codec, nullptr) < 0) {
         throw std::runtime_error("[Decoder] Could not open codec");

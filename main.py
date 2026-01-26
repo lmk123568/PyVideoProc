@@ -36,6 +36,9 @@ class VideoPipe(mp.Process):
             buffer_size=4 * 1024 * 1024,
             max_delay_ms=200,
             reorder_queue_size=32,
+            decoder_threads=2,
+            surfaces=2,
+            hwaccel="cuda",
         )
 
         encoder = nv.Encoder(
