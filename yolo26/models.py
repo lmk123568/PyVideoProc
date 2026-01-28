@@ -1,8 +1,7 @@
 import torch
+import torch.nn.functional as F
 
 from .backend import TRTBackend
-
-import torch.nn.functional as F
 
 
 class YOLO26DetTRT:

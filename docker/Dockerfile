@@ -10,4 +10,4 @@ RUN \
     pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple ultralytics onnx onnxslim tensorrt && \
     rm -rf /var/lib/apt/lists/*
 
-# docker build -t jtdz_cv:v1 .
+# docker build -t pynvvideopipe:cuda12.6 .

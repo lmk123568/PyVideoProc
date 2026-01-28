@@ -4,7 +4,7 @@ import subprocess
 from setuptools import setup
 from torch.utils.cpp_extension import BuildExtension, CUDAExtension, library_paths
 
-MODULE_NAME = "nv"
+MODULE_NAME = "nv_accel"
 
 os.environ.setdefault("CC", "gcc")
 os.environ.setdefault("CXX", "g++")
@@ -67,7 +67,7 @@ setup(
                 "src/Decoder.cpp",
                 "src/Encoder.cpp",
                 "src/rgb_to_nv12.cu",
-                "src/bindings.cpp",
+                "./bindings.cpp",
             ],
             include_dirs=include_dirs,
             library_dirs=library_dirs,

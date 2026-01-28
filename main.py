@@ -1,18 +1,10 @@
 import time
-import os
-import sys
-import glob
+
 import multiprocessing as mp
 
 from yolo26.models import YOLO26DetTRT
+from codec import nv_accel
 
-sys.path.append(os.getcwd())
-
-so_files = glob.glob(os.path.join(os.getcwd(), "build/lib.*/*.so"))
-if so_files:
-    sys.path.insert(0, os.path.dirname(os.path.abspath(so_files[0])))
-
-import nv
 
 
 class VideoPipe(mp.Process):
@@ -23,7 +15,7 @@ class VideoPipe(mp.Process):
 
     def run(self):
 
-        decoder = nv.Decoder(
+        decoder = nv_accel.Decoder(
             self.input_url,
             enable_frame_skip=True,
             output_width=1024,
@@ -41,7 +33,7 @@ class VideoPipe(mp.Process):
             hwaccel="cuda",
         )
 
-        encoder = nv.Encoder(
+        encoder = nv_accel.Encoder(
             output_url=self.output_url,
             width=decoder.get_width(),
             height=decoder.get_height(),
@@ -68,11 +60,9 @@ class VideoPipe(mp.Process):
 
             try:
                 frame, pts = decoder.next_frame()
-            except:
-                sys.exit(1)
-
-            if frame is None or frame.numel() == 0:
-                break
+            except Exception as e:
+                print(f"Error: {e}")
+                continue
 
             frame_count += 1
 
@@ -82,7 +72,7 @@ class VideoPipe(mp.Process):
 
             t2 = time.time()
 
-            # encoder.encode(frame)
+            # track results
 
             t3 = time.time()
 

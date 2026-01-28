@@ -7,8 +7,6 @@
 #include <nppi_color_conversion.h>
 #include <nppi_geometry_transforms.h>
 
-#include <algorithm>
-#include <chrono>
 #include <stdexcept>
 #include <thread>
 

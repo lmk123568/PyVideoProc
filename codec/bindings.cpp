@@ -1,9 +1,11 @@
 #include <torch/extension.h>
 
-#include "Decoder.h"
-#include "Encoder.h"
+#include "src/Decoder.h"
+#include "src/Encoder.h"
 
-PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
+#define MODULE_NAME nv_accel
+
+PYBIND11_MODULE(MODULE_NAME, m) {
     py::class_<Decoder>(m, "Decoder")
         .def(py::init([](const std::string& filename,
                          bool               enable_frame_skip,
@@ -56,9 +58,9 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
         .def("get_height", &Decoder::get_height)
         .def("get_fps", &Decoder::get_fps);
 
-    py::class_<VideoEncoder>(m, "Encoder")
+    py::class_<Encoder>(m, "Encoder")
         .def(py::init([](const std::string& output_url, int width, int height, float fps, std::string codec, int bitrate) {
-                 return std::make_unique<VideoEncoder>(output_url, width, height, (int)fps, bitrate);
+                 return std::make_unique<Encoder>(output_url, width, height, (int)fps, codec, bitrate);
              }),
              py::arg("output_url"),
              py::arg("width"),
@@ -66,6 +68,6 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
              py::arg("fps"),
              py::arg("codec")   = "h264",
              py::arg("bitrate") = 2000000)
-        .def("encode", &VideoEncoder::encode, py::arg("frame"), py::arg("pts") = -1.0)
-        .def("finish", &VideoEncoder::finish);
+        .def("encode", &Encoder::encode, py::arg("frame"), py::arg("pts") = -1.0)
+        .def("finish", &Encoder::finish);
 }

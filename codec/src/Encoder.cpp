@@ -7,17 +7,17 @@
 
 #include "rgb_to_nv12.h"
 
-VideoEncoder::VideoEncoder(const std::string& filename, int width, int height, int fps, int bitrate)
+Encoder::Encoder(const std::string& filename, int width, int height, int fps, std::string codec, int bitrate)
     : filename(filename), width(width), height(height), fps(fps), bitrate(bitrate) {
-    init_ffmpeg();
+    init_ffmpeg(codec);
 }
 
-VideoEncoder::~VideoEncoder() {
+Encoder::~Encoder() {
     finish();
     cleanup();
 }
 
-void VideoEncoder::init_ffmpeg() {
+void Encoder::init_ffmpeg(std::string codec) {
     av_log_set_level(AV_LOG_ERROR);
 
     const char* format_name = nullptr;
@@ -35,17 +35,17 @@ void VideoEncoder::init_ffmpeg() {
         throw std::runtime_error("Could not create output context for " + filename);
     }
 
-    const AVCodec* codec = avcodec_find_encoder_by_name("h264_nvenc");
-    if (!codec) {
+    const AVCodec* encoder_codec = avcodec_find_encoder_by_name("h264_nvenc");
+    if (!encoder_codec) {
         throw std::runtime_error("h264_nvenc codec not found");
     }
 
-    video_stream = avformat_new_stream(format_ctx, codec);
+    video_stream = avformat_new_stream(format_ctx, encoder_codec);
     if (!video_stream) {
         throw std::runtime_error("Could not allocate stream");
     }
 
-    codec_ctx = avcodec_alloc_context3(codec);
+    codec_ctx = avcodec_alloc_context3(encoder_codec);
     if (!codec_ctx) {
         throw std::runtime_error("Could not allocate codec context");
     }
@@ -98,7 +98,7 @@ void VideoEncoder::init_ffmpeg() {
     av_dict_set(&opts, "tune", "ull", 0);
     av_dict_set(&opts, "zerolatency", "1", 0);
 
-    ret = avcodec_open2(codec_ctx, codec, &opts);
+    ret = avcodec_open2(codec_ctx, encoder_codec, &opts);
     av_dict_free(&opts);
     if (ret < 0) {
         throw std::runtime_error("Could not open codec");
@@ -125,7 +125,7 @@ void VideoEncoder::init_ffmpeg() {
     packet = av_packet_alloc();
 }
 
-void VideoEncoder::cleanup() {
+void Encoder::cleanup() {
     if (frame) av_frame_free(&frame);
     if (packet) av_packet_free(&packet);
     if (codec_ctx) avcodec_free_context(&codec_ctx);
@@ -138,7 +138,7 @@ void VideoEncoder::cleanup() {
     if (hw_device_ctx) av_buffer_unref(&hw_device_ctx);
 }
 
-void VideoEncoder::encode(torch::Tensor tensor, double pts) {
+void Encoder::encode(torch::Tensor tensor, double pts) {
     if (!tensor.is_cuda() || tensor.dtype() != torch::kUInt8) {
         throw std::runtime_error("Input tensor must be CUDA uint8");
     }
@@ -203,7 +203,7 @@ void VideoEncoder::encode(torch::Tensor tensor, double pts) {
     }
 }
 
-void VideoEncoder::finish() {
+void Encoder::finish() {
     if (is_finished) return;
     is_finished = true;
 
