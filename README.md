@@ -1,6 +1,6 @@
 # PyNvVideoPipe
 
-![License](https://img.shields.io/badge/license-Apache_2.0-blue.svg?style=for-the-badge)
+![License](https://img.shields.io/badge/license-BSD_2--Clause-blue.svg?style=for-the-badge)
 ![Nvidia](https://img.shields.io/badge/CUDA-12.6.3-76B900?&logoColor=white&style=for-the-badge)
 ![OS](https://img.shields.io/badge/OS-Linux-FCC624?&logoColor=white&style=for-the-badge)
 
@@ -14,7 +14,7 @@ Minimizes memory copies and CPU–GPU data transfers for maximum efficiency
 
 支持多路视频流、多 GPU 与多模型推理
 
-最大限度减少显存拷贝和 CPU–GPU 数据传输，提升推理效率
+更少的显存拷贝和 CPU–GPU 数据拷贝，提升推理效率
 
 |                                                           | Open Source开源 |      Learning Curve学习成本      | Developer-Friendliness二次开发友好度 |          Performance性能          |
 | :-------------------------------------------------------: | :-------------: | :------------------------------: | :----------------------------------: | :-------------------------------: |
@@ -55,17 +55,14 @@ docker run -it \
 
 后续示例代码默认在容器内`/workspace`运行
 
-##### 2. 编译硬件加速库实现
+> ⚠️ 不推荐自己本地装环境，如果一定要自己装，请参考 Dockerfile
+
+##### 2. 编译硬件编解码库
 
 ```bash
 cd /codec
-
-# Two options, pick one
-python setup.py build_ext --inplace  # Debug
-python setup.py install  # Release
+python setup.py install
 ```
-
-> 不推荐自己本地装环境，如果一定要自己装，请参考 Dockerfile
 
 ##### 3. 训练模型权重转换
 
@@ -76,37 +73,42 @@ cd /yolo26
 python pt2trt.py  --w yolo26n.pt --fp16
 ```
 
-🚀🚀🚀 推理尺寸建议固定为`(576,1024)`，可以跳过`letterbox`降低计算开销
+> 💡 推理尺寸建议固定为`(576,1024)`，可以跳过`letterbox`降低计算开销
 
 ##### 4. 运行
 
-修改并理解`main.py`
+开启 MPS（Multi-Process Service）
+
+```bash
+nvidia-cuda-mps-control -d
+# echo quit | nvidia-cuda-mps-control  关闭 MPS
+```
+
+修改并运行代码
 
 ```bash
 cd /workspace
 python main.py
 ```
 
+更多细节和技巧请阅读 `main.py` 注释
+
 ### Benchmark
 
-**Date**: 2026-01-25
+测试日期: 2026-01-25
 
-**Hardware**: AMD Ryzen 9 5950 X + NVIDIA GeForce RTX 3090
+测试硬件: AMD Ryzen 9 5950 X + NVIDIA GeForce RTX 3090
 
-**Test Configuration**: 4 × RTSP Decoders → YOLO26 (TensorRT) → 4 × RTMP Encoders
+测试任务: 4 × RTSP Decoders → YOLO26 (TensorRT) → 4 × RTMP Encoders
 
 |                           | CPU     | RAM     | GPU VRAM | **GPU-Util** |
 | ------------------------- | ------- | ------- | -------- | ------------ |
 | VidepPipe（ffmpeg codec） | 511.6 % | 1.5 GiB | 2677 MiB | 16 %         |
 | Our                       | 9.9%    | 1.2GiB  | 3932 MiB | 9%           |
 
-### Notes
-
-- 更多细节和技巧请阅读 `main.py` 注释
-- 大简之道是最美的艺术，没有之一
-- 工程不是追求完美的数学解，而是在资源受限、时间紧迫、需求模糊的情况下，寻找一个可用的最优解
+> 工程不是追求完美的数学解，而是在资源受限、时间紧迫、需求模糊的情况下，寻找一个可用的最优解
 
 ### License
 
-[Apache 2.0](https://github.com/lmk123568/PyNvVideoPipe/blob/main/LICENSE)
+[BSD 2-Clause](https://github.com/lmk123568/PyNvVideoPipe/blob/main/LICENSE)
 
