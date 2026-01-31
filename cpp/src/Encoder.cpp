@@ -90,7 +90,7 @@ void Encoder::init_ffmpeg(std::string codec) {
     frames_ctx->sw_format         = AV_PIX_FMT_NV12;
     frames_ctx->width             = width;
     frames_ctx->height            = height;
-    frames_ctx->initial_pool_size = 20;
+    frames_ctx->initial_pool_size = 6;
 
     ret = av_hwframe_ctx_init(hw_frames_ref);
     if (ret < 0) {
@@ -105,6 +105,7 @@ void Encoder::init_ffmpeg(std::string codec) {
     av_dict_set(&opts, "preset", "p1", 0);
     av_dict_set(&opts, "tune", "ull", 0);
     av_dict_set(&opts, "zerolatency", "1", 0);
+    av_dict_set(&opts, "surfaces", "4", 0);
 
     ret = avcodec_open2(codec_ctx, encoder_codec, &opts);
     av_dict_free(&opts);
