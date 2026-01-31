@@ -38,14 +38,14 @@ class VideoPipe(torch.multiprocessing.Process):
         )
 
         # Initialize CUDA-based H.264 encoder matching decoder's resolution
-        # encoder = nv_accel.Encoder(
-        #     output_url=self.output_url,
-        #     width=decoder.get_width(),
-        #     height=decoder.get_height(),
-        #     fps=25.0,
-        #     codec="h264",
-        #     bitrate=1_000_000,  # 1 Mbps target bitrate
-        # )
+        encoder = nv_accel.Encoder(
+            output_url=self.output_url,
+            width=decoder.get_width(),
+            height=decoder.get_height(),
+            fps=25.0,
+            codec="h264",
+            bitrate=1_000_000,  # 1 Mbps target bitrate
+        )
 
         # Load TensorRT-optimized YOLOv26 nano model for object detection
         yolo = nv_accel.Yolo26DetTRT(
@@ -55,10 +55,10 @@ class VideoPipe(torch.multiprocessing.Process):
         )
 
         # Supervision annotators and tracker for visualization
-        # box_annotator = sv.BoxAnnotator()
-        # label_annotator = sv.LabelAnnotator()
-        # tracker = sv.ByteTrack()
-        # trace_annotator = sv.TraceAnnotator()
+        tracker = sv.ByteTrack()
+        box_annotator = sv.BoxAnnotator()
+        label_annotator = sv.LabelAnnotator()
+        trace_annotator = sv.TraceAnnotator()
 
         # Frame counter for profiling
         frame_count = 0
@@ -97,42 +97,42 @@ class VideoPipe(torch.multiprocessing.Process):
             t2 = time.time()  # End of detection stage
 
             # # Convert GPU tensor to numpy and build supervision.Detections
-            # det_results = det_results.cpu().numpy()
-            # det_results = sv.Detections(
-            #     xyxy=det_results[:, :4],
-            #     confidence=det_results[:, 4],
-            #     class_id=det_results[:, 5].astype(int),
-            # )
-            # # Update tracker with current detections
-            # tracker_results = tracker.update_with_detections(det_results)
+            det_results = det_results.cpu().numpy()
+            det_results = sv.Detections(
+                xyxy=det_results[:, :4],
+                confidence=det_results[:, 4],
+                class_id=det_results[:, 5].astype(int),
+            )
+            # Update tracker with current detections
+            tracker_results = tracker.update_with_detections(det_results)
             t3 = time.time()  # End of tracking stage
 
-            # # Move frame back to CPU for annotation
-            # annotated_frame = frame.cpu().numpy()
+            # Move frame back to CPU for annotation
+            annotated_frame = frame.cpu().numpy()
 
-            # # Build label text: tracker_id + class_id
-            # labels = [
-            #     f"#{tracker_id} {class_id}"
-            #     for tracker_id, class_id in zip(
-            #         tracker_results.tracker_id, tracker_results.class_id
-            #     )
-            # ]
+            # Build label text: tracker_id + class_id
+            labels = [
+                f"#{tracker_id} {class_id}"
+                for tracker_id, class_id in zip(
+                    tracker_results.tracker_id, tracker_results.class_id
+                )
+            ]
 
-            # # Draw boxes, traces and labels on the frame
-            # annotated_frame = box_annotator.annotate(
-            #     scene=annotated_frame, detections=tracker_results
-            # )
-            # annotated_frame = trace_annotator.annotate(
-            #     scene=annotated_frame, detections=tracker_results
-            # )
-            # annotated_frame = label_annotator.annotate(
-            #     scene=annotated_frame, detections=tracker_results, labels=labels
-            # )
+            # Draw boxes, traces and labels on the frame
+            annotated_frame = box_annotator.annotate(
+                scene=annotated_frame, detections=tracker_results
+            )
+            annotated_frame = trace_annotator.annotate(
+                scene=annotated_frame, detections=tracker_results
+            )
+            annotated_frame = label_annotator.annotate(
+                scene=annotated_frame, detections=tracker_results, labels=labels
+            )
             t4 = time.time()  # End of drawing stage
 
-            # # Send annotated frame back to GPU and encode
-            # annotated_frame = torch.from_numpy(annotated_frame).to("cuda")
-            # encoder.encode(annotated_frame, pts)
+            # Send annotated frame back to GPU and encode
+            annotated_frame = torch.from_numpy(annotated_frame).to("cuda")
+            encoder.encode(annotated_frame, pts)
             t5 = time.time()  # End of encode stage
 
             # Business Logic
@@ -179,22 +179,22 @@ if __name__ == "__main__":
     args = [
         {
             "gpu": 0,
-            "input_url": "rtsp://172.16.3.210:8554/live/172.16.3.107",
+            "input_url": "rtsp://172.16.3.210:8554/live/172.60.34.164",
             "output_url": "rtmp://172.16.3.210:1935/live/test_outq1",
         },
         {
             "gpu": 0,
-            "input_url": "rtsp://172.16.3.210:8554/live/172.16.3.107",
+            "input_url": "rtsp://172.16.3.210:8554/live/172.60.34.164",
             "output_url": "rtmp://172.16.3.210:1935/live/test_outq2",
         },
         {
             "gpu": 0,
-            "input_url": "rtsp://172.16.3.210:8554/live/172.16.3.107",
+            "input_url": "rtsp://172.16.3.210:8554/live/172.60.34.164",
             "output_url": "rtmp://172.16.3.210:1935/live/test_outq3",
         },
         {
             "gpu": 0,
-            "input_url": "rtsp://172.16.3.210:8554/live/172.16.3.107",
+            "input_url": "rtsp://172.16.3.210:8554/live/172.60.34.164",
             "output_url": "rtmp://172.16.3.210:1935/live/test_outq4",
         },
     ]
