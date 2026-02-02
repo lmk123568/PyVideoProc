@@ -38,11 +38,13 @@ class VideoProc(mp.Process):
         )
 
         # Initialize CUDA-based H.264 encoder matching decoder's resolution
+        fps = decoder.get_fps()
+        fps = float(round(fps)) if fps and fps > 0 else 25.0
         encoder = nv_accel.Encoder(
             output_url=self.output_url,
             width=decoder.get_width(),
             height=decoder.get_height(),
-            fps=25.0,
+            fps=fps,
             codec="h264",
             bitrate=1_000_000,  # 1 Mbps target bitrate
         )
@@ -70,103 +72,109 @@ class VideoProc(mp.Process):
         sum_encode = 0
         sum_event = 0
 
-        while 1:
-            t0 = time.time()  # Start timing for frame-wait stage
+        try:
+            while 1:
+                t0 = time.time()  # Start timing for frame-wait stage
 
-            # Fetch next decoded frame; pts is presentation timestamp
-            try:
-                frame, pts = decoder.next_frame()
-            except Exception as e:
-                print(f"Error: {e}")
-                continue
+                # Fetch next decoded frame; pts is presentation timestamp
+                try:
+                    frame, pts = decoder.next_frame()
+                except Exception as e:
+                    print(f"Error: {e}")
+                    continue
 
-            frame_count += 1
-            t1 = time.time()  # End of wait stage, start of detection
+                if pts < 0 or frame.numel() == 0:
+                    break
 
-            # Run YOLO inference on GPU tensor
-            det_results = yolo(frame)
+                frame_count += 1
+                t1 = time.time()  # End of wait stage, start of detection
 
-            # Additional models can be added for secondary inference
-            # Ensure every model's inputs and outputs remain GPU tensors
-            # Avoid CPU <-> GPU transfers during model inference
-            # eg:
-            # cls_results = cls(frame)
-            # seg_results = seg(frame)
+                # Run YOLO inference on GPU tensor
+                det_results = yolo(frame)
 
-            t2 = time.time()  # End of detection stage
+                # Additional models can be added for secondary inference
+                # Ensure every model's inputs and outputs remain GPU tensors
+                # Avoid CPU <-> GPU transfers during model inference
+                # eg:
+                # cls_results = cls(frame)
+                # seg_results = seg(frame)
 
-            # # Convert GPU tensor to numpy and build supervision.Detections
-            det_results = det_results.cpu().numpy()
-            det_results = sv.Detections(
-                xyxy=det_results[:, :4],
-                confidence=det_results[:, 4],
-                class_id=det_results[:, 5].astype(int),
-            )
-            # Update tracker with current detections
-            tracker_results = tracker.update_with_detections(det_results)
-            t3 = time.time()  # End of tracking stage
+                t2 = time.time()  # End of detection stage
 
-            # Move frame back to CPU for annotation
-            annotated_frame = frame.cpu().numpy()
-
-            # Build label text: tracker_id + class_id
-            labels = [
-                f"#{tracker_id} {class_id}"
-                for tracker_id, class_id in zip(
-                    tracker_results.tracker_id, tracker_results.class_id
+                # # Convert GPU tensor to numpy and build supervision.Detections
+                det_results = det_results.cpu().numpy()
+                det_results = sv.Detections(
+                    xyxy=det_results[:, :4],
+                    confidence=det_results[:, 4],
+                    class_id=det_results[:, 5].astype(int),
                 )
-            ]
+                # Update tracker with current detections
+                tracker_results = tracker.update_with_detections(det_results)
+                t3 = time.time()  # End of tracking stage
 
-            # Draw boxes, traces and labels on the frame
-            annotated_frame = box_annotator.annotate(
-                scene=annotated_frame, detections=tracker_results
-            )
-            annotated_frame = trace_annotator.annotate(
-                scene=annotated_frame, detections=tracker_results
-            )
-            annotated_frame = label_annotator.annotate(
-                scene=annotated_frame, detections=tracker_results, labels=labels
-            )
-            t4 = time.time()  # End of drawing stage
+                # Move frame back to CPU for annotation
+                annotated_frame = frame.cpu().numpy()
 
-            # Send annotated frame back to GPU and encode
-            annotated_frame = torch.from_numpy(annotated_frame).to("cuda")
-            encoder.encode(annotated_frame, pts)
-            t5 = time.time()  # End of encode stage
+                # Build label text: tracker_id + class_id
+                labels = [
+                    f"#{tracker_id} {class_id}"
+                    for tracker_id, class_id in zip(
+                        tracker_results.tracker_id, tracker_results.class_id
+                    )
+                ]
 
-            # Business Logic
-            # is_person = event(tracker_results)
-            # if is_person:
-            #     print("Person detected!")
-            t6 = time.time()  # End of event stage
-
-            # Accumulate stage durations
-            sum_wait += t1 - t0
-            sum_det += t2 - t1
-            sum_track += t3 - t2
-            sum_draw += t4 - t3
-            sum_encode += t5 - t4
-            sum_event += t6 - t5
-
-            # Report average latency every 1000 frames
-            if frame_count == 1000:
-                print(
-                    f"[{time.strftime('%m/%d/%Y-%H:%M:%S', time.localtime())}] VideoPipe: {self.input_url}, "
-                    f"Det: {sum_det:.2f}ms, "
-                    f"Track: {sum_track:.2f}ms, "
-                    f"Draw: {sum_draw:.2f}ms, "
-                    f"Encode: {sum_encode:.2f}ms, "
-                    f"Event: {sum_event:.2f}ms, "
-                    f"Wait: {sum_wait:.2f}ms "
+                # Draw boxes, traces and labels on the frame
+                annotated_frame = box_annotator.annotate(
+                    scene=annotated_frame, detections=tracker_results
                 )
-                # Reset counters
-                frame_count = 0
-                sum_det = 0
-                sum_track = 0
-                sum_draw = 0
-                sum_encode = 0
-                sum_event = 0
-                sum_wait = 0
+                annotated_frame = trace_annotator.annotate(
+                    scene=annotated_frame, detections=tracker_results
+                )
+                annotated_frame = label_annotator.annotate(
+                    scene=annotated_frame, detections=tracker_results, labels=labels
+                )
+                t4 = time.time()  # End of drawing stage
+
+                # Send annotated frame back to GPU and encode
+                annotated_frame = torch.from_numpy(annotated_frame).to("cuda")
+                encoder.encode(annotated_frame)
+                t5 = time.time()  # End of encode stage
+
+                # Business Logic
+                # is_person = event(tracker_results)
+                # if is_person:
+                #     print("Person detected!")
+                t6 = time.time()  # End of event stage
+
+                # Accumulate stage durations
+                sum_wait += t1 - t0
+                sum_det += t2 - t1
+                sum_track += t3 - t2
+                sum_draw += t4 - t3
+                sum_encode += t5 - t4
+                sum_event += t6 - t5
+
+                # Report average latency every 1000 frames
+                if frame_count == 1000:
+                    print(
+                        f"[{time.strftime('%m/%d/%Y-%H:%M:%S', time.localtime())}] VideoPipe: {self.input_url}, "
+                        f"Det: {sum_det:.2f}ms, "
+                        f"Track: {sum_track:.2f}ms, "
+                        f"Draw: {sum_draw:.2f}ms, "
+                        f"Encode: {sum_encode:.2f}ms, "
+                        f"Event: {sum_event:.2f}ms, "
+                        f"Wait: {sum_wait:.2f}ms "
+                    )
+                    # Reset counters
+                    frame_count = 0
+                    sum_det = 0
+                    sum_track = 0
+                    sum_draw = 0
+                    sum_encode = 0
+                    sum_event = 0
+                    sum_wait = 0
+        finally:
+            encoder.finish()
 
 
 if __name__ == "__main__":
@@ -178,23 +186,23 @@ if __name__ == "__main__":
     args = [
         {
             "gpu": 0,
-            "input_url": "rtsp://172.16.3.210:8554/live/172.60.34.164",
-            "output_url": "rtmp://172.16.3.210:1935/live/test_outq1",
+            "input_url": "rtsp://127.0.0.1:8554/live/input",
+            "output_url": "rtmp://127.0.0.1:1935/live/out",
         },
         {
             "gpu": 0,
-            "input_url": "rtsp://172.16.3.210:8554/live/172.60.34.164",
-            "output_url": "rtmp://172.16.3.210:1935/live/test_outq2",
+            "input_url": "rtsp://127.0.0.1:8554/live/input",
+            "output_url": "output_annotated.mp4",
         },
         {
             "gpu": 0,
-            "input_url": "rtsp://172.16.3.210:8554/live/172.60.34.164",
-            "output_url": "rtmp://172.16.3.210:1935/live/test_outq3",
+            "input_url": "input.mp4",
+            "output_url": "output_annotated.mp4",
         },
         {
             "gpu": 0,
-            "input_url": "rtsp://172.16.3.210:8554/live/172.60.34.164",
-            "output_url": "rtmp://172.16.3.210:1935/live/test_outq4",
+            "input_url": "input.mp4",
+            "output_url": "rtmp://127.0.0.1:1935/live/out",
         },
     ]
 
