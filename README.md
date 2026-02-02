@@ -1,7 +1,7 @@
 <p style="" align="center">
   <img src="./assets/logo.png" alt="Logo" width="20%">
 </p>
-<h1 align="center">VidProc</h1>
+<h1 align="center">VideoProc</h1>
 <p style="margin:0px" align="center">
     <img src="https://img.shields.io/badge/license-BSD--2-blue.svg?&logo=c&logoColor=white&style=for-the-badge">
     <img src="https://img.shields.io/badge/CUDA-12.8-76B900?&logo=nvidia&logoColor=white&style=for-the-badge">
@@ -10,7 +10,7 @@
 
 ---
 
-VidProc 是一个基于 Python 的高性能多路视频处理流水线框架
+VideoProc 是一个基于 Python 的高性能多路视频处理流水线框架
 
 ⭐ 多进程单线程绕过 GIL 限制，支持多视频流、多 GPU 与多模型推理
 
@@ -39,8 +39,8 @@ VidProc 是一个基于 Python 的高性能多路视频处理流水线框架
 clone 本项目，生成包含完整开发环境的镜像
 
 ```bash
-git clone https://github.com/lmk123568/vidproc.git
-cd VidProc/docker
+git clone https://github.com/lmk123568/VideoProc.git
+cd VideoProc/docker
 docker build -t vidproc:cuda12.8 .
 ```
 
@@ -50,7 +50,7 @@ docker build -t vidproc:cuda12.8 .
 docker run -it \
   --gpus all \
   -e NVIDIA_DRIVER_CAPABILITIES=all \
-  -v {your_path}/VidProc:/workspace \
+  -v {your_path}/VideoProc:/workspace \
   vidproc:cuda12.8 \
   bash
 ```
@@ -69,7 +69,7 @@ python scripts/setup.py install
 
 ### 3. 训练模型权重转换
 
-将通过 [ultralytics](https://github.com/ultralytics/ultralytics) 训练的`pt`模型导入到当前目录下（示例模型为 [yolo26n.pt](https://github.com/ultralytics/assets/releases/download/v8.4.0/yolo26n.pt)）
+将通过 [ultralytics](https://github.com/ultralytics/ultralytics) 训练的`pt`模型导入到当前目录（`/workspace`）下（示例模型为 [yolo26n.pt](https://github.com/ultralytics/assets/releases/download/v8.4.0/yolo26n.pt)）
 
 ```bash
 python scripts/pt2trt.py  --w ./yolo26n.pt --fp16
@@ -78,6 +78,8 @@ python scripts/pt2trt.py  --w ./yolo26n.pt --fp16
  转换过程中会与 ultralytics 官方结果进行推理对齐
 
 > 💡 TensorRT 编译生成 .engine 过程中，推理尺寸默认设置为`(576,1024)`，可以跳过`letterbox`降低计算开销
+
+> 遇到警告 `requirements: Ultralytics requirement ['onnxruntime-gpu'] not found, attempting AutoUpdate...` 可以 `Ctrl + C` 跳过
 
 ### 4. 运行
 
@@ -107,7 +109,7 @@ python main.py
 | VideoPipe（ffmpeg codec） | 511.6 % | 1.5 GiB | 2677 MiB | 16 %         |
 | Our                       | 40 %    | 1.2GiB  | 3932 MiB | 12 %         |
 
-> 工程不是追求完美的数学解，而是在资源受限、时间紧迫、需求模糊的情况下，寻找一个可用的最优解
+
 
 ## Pipeline
 
@@ -115,4 +117,4 @@ python main.py
 
 ## License
 
-[BSD-2-Clause](https://github.com/lmk123568/PyNvVideoPipe/blob/main/LICENSE)
+[BSD-2-Clause](https://github.com/lmk123568/VideoProc/blob/main/LICENSE)

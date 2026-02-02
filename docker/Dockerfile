@@ -9,5 +9,3 @@ RUN \
     apt install -y --no-install-recommends ffmpeg vim pkg-config libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libswresample-dev && \
     pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple ultralytics onnx onnxslim tensorrt supervision && \
     rm -rf /var/lib/apt/lists/*
-
-# docker build -t pynvvideopipe:cuda12.6 .

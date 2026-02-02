@@ -3,9 +3,10 @@ import time
 
 import supervision as sv
 import torch
+import torch.multiprocessing as mp
 
 
-class VideoPipe(torch.multiprocessing.Process):
+class VideoProc(mp.Process):
     def __init__(self, gpu, input_url, output_url):
         super().__init__()
         self.gpu = gpu
@@ -34,7 +35,6 @@ class VideoPipe(torch.multiprocessing.Process):
             reorder_queue_size=32,  # B-frame reorder queue length
             decoder_threads=2,  # Number of decoder threads
             surfaces=2,  # Number of CUDA surfaces for buffering
-            hwaccel="cuda",  # Use NVIDIA hardware acceleration
         )
 
         # Initialize CUDA-based H.264 encoder matching decoder's resolution
@@ -50,7 +50,6 @@ class VideoPipe(torch.multiprocessing.Process):
         # Load TensorRT-optimized YOLOv26 nano model for object detection
         yolo = nv_accel.Yolo26DetTRT(
             engine_path="./yolo26n_1x3x576x1024_fp16.engine",
-            device_id=0,
             conf_thres=0.25,  # Confidence threshold for detections
         )
 
@@ -203,10 +202,10 @@ if __name__ == "__main__":
     # ensuring that each subprocess initializes CUDA independently.
     # When used with NVIDIA MPS (Multi-Process Service), spawn mode enables
     # multiple processes to share the same GPU compute resources, improving concurrency efficiency.
-    torch.multiprocessing.set_start_method("spawn")
+    mp.set_start_method("spawn")
     process_pool = []
     for i in args:
-        vp = VideoPipe(i["gpu"], i["input_url"], i["output_url"])
+        vp = VideoProc(i["gpu"], i["input_url"], i["output_url"])
         vp.start()
         process_pool.append(vp)
 
