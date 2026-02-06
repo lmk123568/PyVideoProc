@@ -10,7 +10,7 @@
 
 ---
 
-VideoProc 提供了基于 CUDA 加速优化的视频编解码推理 Python SDK，支持多路视频流的同时解码、推理、编码，同时支持多 GPU 与多模型推理
+VideoProc 提供了基于 CUDA 加速优化的视频编解码推理 Python SDK，支持 **多路多卡多模型** 解码、推理、编码
 
 ⭐ 多进程单线程绕过 GIL 限制，提升 Python 并发性能
 
