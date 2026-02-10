@@ -1,7 +1,7 @@
 <p style="" align="center">
   <img src="./assets/logo.png" alt="Logo" width="20%">
 </p>
-<h1 align="center">VideoProc</h1>
+<h1 align="center">PyVideoProc</h1>
 <p style="margin:0px" align="center">
     <img src="https://img.shields.io/badge/license-BSD--2-blue.svg?&logo=c&logoColor=white&style=for-the-badge">
     <img src="https://img.shields.io/badge/CUDA-12.8-76B900?&logo=nvidia&logoColor=white&style=for-the-badge">
@@ -10,9 +10,9 @@
 
 ---
 
-VideoProc 提供了基于 CUDA 加速优化的视频编解码推理 Python SDK，支持 **多路多卡多模型** 解码、推理、编码
+PyVideoProc 提供基于 CUDA 加速优化的高性能 Python SDK，可高效实现多路、多卡、多模型的视频解码、AI 推理与编码，显著降低开发复杂度并提升吞吐性能
 
-⭐ 多进程单线程绕过 GIL 限制，提升 Python 并发性能
+⭐ 多进程绕过 GIL 限制，提升 Python 并发性能
 
 ⭐ 减少 Host-Device 数据传输，降低 GPU 显存冗余拷贝，提升推理速度
 
@@ -24,7 +24,7 @@ VideoProc 提供了基于 CUDA 加速优化的视频编解码推理 Python SDK�
 | :-------------------------------------------------------: | :---------: | :------------------------------: | :------------------------------: | :---------: | :----------------------------: |
 | [DeepStream](https://developer.nvidia.com/deepstream-sdk) |      ❌      |               High               |               Low                |    High     | Single-process, multi-threaded |
 | [VideoPipe](https://github.com/sherlockchou86/VideoPipe)  |      ✅      | medium（requires cpp knowledge） | Medium（requires cpp knowledge） |   Medium    | Single-process, multi-threaded |
-|                            Our                            |      ✅      |               ≈ 0                |         High +++++++++++         |   Medium    | Multi-process, single-threaded |
+|                            Our                            |      ✅      |               ≈ 0                |         High       |   Medium    | Multi-process, single-threaded |
 
 ## Quick Start
 
@@ -39,9 +39,9 @@ VideoProc 提供了基于 CUDA 加速优化的视频编解码推理 Python SDK�
 clone 本项目，生成包含完整开发环境的镜像
 
 ```bash
-git clone https://github.com/lmk123568/VideoProc.git
-cd VideoProc/docker
-docker build -t vidproc:cuda12.8 .
+git clone https://github.com/lmk123568/PyVideoProc.git
+cd PyVideoProc/docker
+docker build -t pyvideoproc:cuda12.8 .
 ```
 
 镜像生成后，进入容器，不报错即成功
@@ -50,8 +50,8 @@ docker build -t vidproc:cuda12.8 .
 docker run -it \
   --gpus all \
   -e NVIDIA_DRIVER_CAPABILITIES=all \
-  -v {your_path}/VideoProc:/workspace \
-  vidproc:cuda12.8 \
+  -v {your_path}/PyVideoProc:/workspace \
+  pyvideoproc:cuda12.8 \
   bash
 ```
 
@@ -79,7 +79,7 @@ python scripts/pt2trt.py  --w ./yolo26n.pt --fp16
 
 > 💡 TensorRT 编译生成 .engine 过程中，推理尺寸默认设置为`(576,1024)`，可以跳过`letterbox`降低计算开销
 
-> 遇到警告 `requirements: Ultralytics requirement ['onnxruntime-gpu'] not found, attempting AutoUpdate...` 可以 `Ctrl + C` 跳过
+> 💡 遇到警告 `requirements: Ultralytics requirement ['onnxruntime-gpu'] not found, attempting AutoUpdate...` 可以 `Ctrl + C` 跳过
 
 ### 4. 运行
 
@@ -117,4 +117,4 @@ https://github.com/user-attachments/assets/1d434634-befb-4173-af75-a96284fccfda
 
 ## License
 
-[BSD-2-Clause](https://github.com/lmk123568/VideoProc/blob/main/LICENSE)
+[BSD-2-Clause](https://github.com/lmk123568/PyVideoProc/blob/main/LICENSE)
