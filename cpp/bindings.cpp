@@ -4,9 +4,7 @@
 #include "src/Encoder.h"
 #include "src/Yolo26DetTRT.h"
 
-#define MODULE_NAME nv_accel
-
-PYBIND11_MODULE(MODULE_NAME, m) {
+PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     py::class_<Decoder>(m, "Decoder")
         .def(py::init([](const std::string& filename,
                          bool               enable_frame_skip,
