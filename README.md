@@ -28,6 +28,9 @@ PyVideoProc 提供基于 CUDA 加速优化的高性能 Python SDK，可高效实
 | [VideoPipe](https://github.com/sherlockchou86/VideoPipe)  |      ✅      | medium（requires cpp knowledge） | Medium（requires cpp knowledge） |   Medium    | Single-process, multi-threaded |
 |                            Our                            |      ✅      |               ≈ 0                |         High       |   Medium    | Multi-process, single-threaded |
 
+🔗 Bilibili: [https://www.bilibili.com/video/BV12TcvzbEcZ](https://www.bilibili.com/video/BV12TcvzbEcZ) 
+🔗 Youtube: 
+
 ## Quick Start
 
 本项目推荐 Docker 容器运行，首先确保本地环境满足以下三个条件：
