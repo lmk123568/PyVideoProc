@@ -6,6 +6,9 @@
     <img src="https://img.shields.io/badge/license-BSD--2-blue.svg?&logo=c&logoColor=white&style=for-the-badge">
     <img src="https://img.shields.io/badge/CUDA-12.8-76B900?&logo=nvidia&logoColor=white&style=for-the-badge">
     <img src="https://img.shields.io/badge/OS-Linux-FCC624?&logo=linux&logoColor=white&style=for-the-badge">
+    <img src="https://img.shields.io/badge/ENV-Docker-2496ED?logo=docker&logoColor=white&style=for-the-badge">
+    <img src="https://img.shields.io/badge/Video-YouTube-FF0000?logo=youtube&logoColor=white&style=for-the-badge">
+    <img src="https://img.shields.io/badge/Video-Bilibili-FB7299?logo=bilibili&logoColor=white&style=for-the-badge">
 </p>
 
 ---
@@ -30,7 +33,7 @@ PyVideoProc 提供基于 CUDA 加速优化的高性能 Python SDK，可高效实
 
 🔗 Bilibili: [https://www.bilibili.com/video/BV12TcvzbEcZ](https://www.bilibili.com/video/BV12TcvzbEcZ) 
 
-🔗 Youtube: 
+🔗 YouTube: [https://youtu.be/WxI5h8QDFiE](https://youtu.be/WxI5h8QDFiE)
 
 ## Quick Start
 
