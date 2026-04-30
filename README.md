@@ -63,6 +63,7 @@ docker build -t pyvideoproc:cuda12.8 .
 
 ```bash
 docker run -it \
+  --privileged \
   --gpus all \
   -e NVIDIA_DRIVER_CAPABILITIES=all \
   -v {your_path}/PyVideoProc:/workspace \
