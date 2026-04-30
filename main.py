@@ -197,10 +197,33 @@ if __name__ == "__main__":
     # 多个进程共享同一块 GPU 的计算资源，提升并发效率。
     mp.set_start_method("spawn")
     process_pool = []
-    for i in args:
-        vp = Pipeline(i["gpu"], i["input_url"], i["output_url"])
-        vp.start()
-        process_pool.append(vp)
+
+    # 按 GPU 分组
+    gpu_groups = {}
+    for cfg in args:
+        g = cfg["gpu"]
+        if g not in gpu_groups:
+            gpu_groups[g] = []
+        gpu_groups[g].append(cfg)
+    groups = [gpu_groups[k] for k in sorted(gpu_groups)]
+
+    # 进程延时启动
+    n = max(len(g) for g in groups)
+    started = 0
+    for i in range(n):
+        for g in groups:
+            if i < len(g):
+                cfg = g[i]
+                vp = Pipeline(cfg["gpu"], cfg["input_url"], cfg["output_url"])
+                vp.start()
+                process_pool.append(vp)
+                started += 1
+                print(
+                    f"[main] 已启动进程 {started}/{len(args)}, GPU={cfg['gpu']}, "
+                    f"camera={cfg['input_url']}"
+                )
+
+        time.sleep(5)  # 避免同时建立大量 RTSP 连接冲垮网络
 
     for vp in process_pool:
         vp.join()
