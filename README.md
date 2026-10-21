@@ -3,23 +3,17 @@
 </p>
 <h1 align="center">PyVideoProc</h1>
 <p style="margin:0px" align="center">
-    <img src="https://img.shields.io/badge/license-BSD--2-blue.svg?&logo=c&logoColor=white&style=for-the-badge">
+    <img src="https://img.shields.io/badge/PyTorch-2.7-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white">
     <img src="https://img.shields.io/badge/CUDA-12.8-76B900?&logo=nvidia&logoColor=white&style=for-the-badge">
-    <img src="https://img.shields.io/badge/OS-Linux-FCC624?&logo=linux&logoColor=white&style=for-the-badge">
-    <img src="https://img.shields.io/badge/ENV-Docker-2496ED?logo=docker&logoColor=white&style=for-the-badge">
-    <a href="https://youtu.be/-soVRjH1rb4" target="_blank">
-        <img src="https://img.shields.io/badge/Video-YouTube-FF0000?logo=youtube&logoColor=white&style=for-the-badge">
-    </a>
-    <a href="https://www.bilibili.com/video/BV12TcvzbEcZ" target="_blank">
-        <img src="https://img.shields.io/badge/Video-Bilibili-FB7299?logo=bilibili&logoColor=white&style=for-the-badge">
-    </a>
-</p>
+    <img src="https://img.shields.io/badge/TensorRT-10.9-76B900?style=for-the-badge&logo=nvidia&logoColor=white">
+    <img src="https://img.shields.io/badge/license-BSD--2-blue.svg?&logo=c&logoColor=white&style=for-the-badge"></p>
+
 
 ---
 
-PyVideoProc 提供基于 CUDA 加速优化的高性能 Python SDK，可高效实现多路、多卡、多模型的视频解码、AI 推理与编码，显著降低开发复杂度并提升吞吐性能
+用 Python 在 CUDA  上高效实现多路、多卡、多模型的视频流解码推理跟踪分析，并显著降低开发复杂度
 
-PyVideoProc provides a high-performance Python SDK optimized with CUDA acceleration, enabling efficient multi-stream, multi-GPU, and multi-model video decoding, AI inference, and encoding—significantly reducing development complexity and boosting throughput performance.
+Efficiently implement multi-stream, multi-GPU, and multi-model video decoding, inference, tracking, and analysis on CUDA using Python, while significantly reducing development complexity
 
 [https://github.com/user-attachments/assets/402f9080-004e-457e-8d36-3fefdb56f21d](https://github.com/user-attachments/assets/bb12981c-ac43-40c8-a802-983671356646)
 
@@ -34,12 +28,12 @@ PyVideoProc provides a high-performance Python SDK optimized with CUDA accelerat
 |                                                           | Open Source |          Learning Curve          |      Developer Friendliness      | Performance |      Architecture Design       |
 | :-------------------------------------------------------: | :---------: | :------------------------------: | :------------------------------: | :---------: | :----------------------------: |
 | [DeepStream](https://developer.nvidia.com/deepstream-sdk) |      ❌      |               High               |               Low                |    High     | Single-process, multi-threaded |
-| [VideoPipe](https://github.com/sherlockchou86/VideoPipe)  |      ✅      | medium（requires cpp knowledge） | Medium（requires cpp knowledge） |   Medium    | Single-process, multi-threaded |
-|                            Our                            |      ✅      |               ≈ 0                |         High       |   Medium    | Multi-process, single-threaded |
+| [VideoPipe](https://github.com/sherlockchou86/VideoPipe)  |      ✅      | Medium（requires cpp knowledge） | Medium（requires cpp knowledge） |   Medium    | Single-process, multi-threaded |
+|                            Our                            |      ✅      |               ≈ 0                |              High 🥰              |   Medium    | Multi-process, single-threaded |
 
-🔗 Bilibili: [https://www.bilibili.com/video/BV12TcvzbEcZ](https://www.bilibili.com/video/BV12TcvzbEcZ) 
+[![Bilibili](https://img.shields.io/badge/Bilibili_Video-BV12TcvzbEcZ-FB7299?style=for-the-badge&logo=bilibili&logoColor=white)](https://www.bilibili.com/video/BV12TcvzbEcZ)
 
-🔗 YouTube: [https://youtu.be/-soVRjH1rb4](https://youtu.be/-soVRjH1rb4)
+[![YouTube Video](https://img.shields.io/badge/YouTube_Video---soVRjH1rb4-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/-soVRjH1rb4)
 
 ## Quick Start
 
