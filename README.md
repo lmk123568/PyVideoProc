@@ -31,9 +31,9 @@ Efficiently implement multi-stream, multi-GPU, and multi-model video decoding, i
 | [VideoPipe](https://github.com/sherlockchou86/VideoPipe)  |      ✅      | Medium（requires cpp knowledge） | Medium（requires cpp knowledge） |   Medium    | Single-process, multi-threaded |
 |                            Our                            |      ✅      |               ≈ 0                |              High 🥰              |   Medium    | Multi-process, single-threaded |
 
-[![Bilibili](https://img.shields.io/badge/Bilibili_Video-BV12TcvzbEcZ-FB7299?style=for-the-badge&logo=bilibili&logoColor=white)](https://www.bilibili.com/video/BV12TcvzbEcZ)
+🔥 视频：
 
-[![YouTube Video](https://img.shields.io/badge/YouTube_Video---soVRjH1rb4-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/-soVRjH1rb4)
+[![Bilibili](https://img.shields.io/badge/Bilibili-BV12TcvzbEcZ-FB7299?style=for-the-badge&logo=bilibili&logoColor=white)](https://www.bilibili.com/video/BV12TcvzbEcZ) [![YouTube](https://img.shields.io/badge/YouTube---soVRjH1rb4-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/-soVRjH1rb4)
 
 ## Quick Start
 
