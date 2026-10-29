@@ -7,23 +7,26 @@
     <img src="https://img.shields.io/badge/CUDA-12.8-76B900?&logo=nvidia&logoColor=white&style=for-the-badge">
     <img src="https://img.shields.io/badge/TensorRT-10.9-76B900?style=for-the-badge&logo=nvidia&logoColor=white">
     <img src="https://img.shields.io/badge/license-BSD--2-blue.svg?&logo=c&logoColor=white&style=for-the-badge"></p>
-
-
 ---
 
 用 Python 在 CUDA  上高效实现多路、多卡、多模型的视频流解码推理跟踪分析，并显著降低开发复杂度
 
-Efficiently implement multi-stream, multi-GPU, and multi-model video decoding, inference, tracking, and analysis on CUDA using Python, while significantly reducing development complexity
+Effortless multi-stream, multi-GPU, multi-model video analytics on CUDA — decode, infer, track, and analyze in pure Python.
 
 [https://github.com/user-attachments/assets/402f9080-004e-457e-8d36-3fefdb56f21d](https://github.com/user-attachments/assets/bb12981c-ac43-40c8-a802-983671356646)
 
-⭐ 多进程绕过 GIL 限制，提升 Python 并发性能
+核心特性：
 
-⭐ 减少 Host-Device 数据传输，降低 GPU 显存冗余拷贝，提升推理速度
+- 多进程 + CUDA MPS 架构，彻底绕过 GIL，CPU 占用极低
+- 帧级零拷贝：NVDEC → CUDA Surface → TensorRT 全链路驻留显存，仅检测框结果回传 CPU
 
-⭐ 尽可能在 GPU 上计算，以降低 CPU 计算负担
+- 单批推理（batch=1）保延迟，进程数 × MPS 换吞吐，多路并发近线性扩展
 
-⭐ 开箱即用，简单易懂，扩展性强，适合中小型项目快速部署
+- 多模型 GPU 级联（检测/分类/分割/姿态），中间张量零搬运
+- 工业级流媒体健壮性：自动重连 / 超时控制 / B 帧重排 / 抖动缓冲 / 故障隔离
+- Docker 一键部署，pt→engine 自动转换并与官方推理结果对齐验证
+
+- 开箱即部署，声明式配置，简单易懂，易于扩展
 
 |                                                           | Open Source |          Learning Curve          |      Developer Friendliness      | Performance |      Architecture Design       |
 | :-------------------------------------------------------: | :---------: | :------------------------------: | :------------------------------: | :---------: | :----------------------------: |
@@ -31,9 +34,9 @@ Efficiently implement multi-stream, multi-GPU, and multi-model video decoding, i
 | [VideoPipe](https://github.com/sherlockchou86/VideoPipe)  |      ✅      | Medium（requires cpp knowledge） | Medium（requires cpp knowledge） |   Medium    | Single-process, multi-threaded |
 |                            Our                            |      ✅      |               ≈ 0                |              High 🥰              |   Medium    | Multi-process, single-threaded |
 
-🔥 视频：
+配套视频：[![Bilibili](https://img.shields.io/badge/Bilibili-BV12TcvzbEcZ-FB7299?style=for-the-badge&logo=bilibili&logoColor=white)](https://www.bilibili.com/video/BV12TcvzbEcZ) [![YouTube](https://img.shields.io/badge/YouTube---soVRjH1rb4-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/-soVRjH1rb4)
 
-[![Bilibili](https://img.shields.io/badge/Bilibili-BV12TcvzbEcZ-FB7299?style=for-the-badge&logo=bilibili&logoColor=white)](https://www.bilibili.com/video/BV12TcvzbEcZ) [![YouTube](https://img.shields.io/badge/YouTube---soVRjH1rb4-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/-soVRjH1rb4)
+🔥🔥🔥 RK3588 版本实现：[PyVideoProc_RK3588](https://github.com/lmk123568/PyVideoProc_RK3588)
 
 ## Quick Start
 
@@ -119,6 +122,16 @@ python main.py
 | ------------------------- | ------- | ------- | -------- | ------------ |
 | VideoPipe（ffmpeg codec） | 511.6 % | 1.5 GiB | 2677 MiB | 16 %         |
 | Our                       | 40 %    | 1.2GiB  | 3932 MiB | 12 %         |
+
+## Architecture
+
+<p style="margin: 10px 0px" align="center">
+  <img src="assets/pvp_architecture.svg" alt="architecture" style="width: 80%" />
+</p>
+
+多进程单批推理的架构缺点是吃显存，但换来的是天级交付周期、无需专业背景的维护门槛、天然的掉线隔离，以及可预期的故障排查路径
+
+对于摄像头频繁掉线、网络不稳定、团队技术储备有限的现场环境，这个取舍比理论性能更优的方案更合适
 
 ## License
 
