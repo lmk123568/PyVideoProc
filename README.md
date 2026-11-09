@@ -23,7 +23,7 @@ Effortless multi-stream, multi-GPU, multi-model video analytics on CUDA — deco
 
 - 单批推理（batch=1）保延迟，进程数 × MPS 换吞吐，多路并发近线性扩展
 
-- 多模型 GPU 级联（检测/分类/分割/姿态），中间张量零搬运
+- 可多模型 GPU 级联（检测/分类/分割/姿态），中间张量零搬运
 
 - 工业级流媒体健壮性：自动重连 / 超时控制 / B 帧重排 / 抖动缓冲 / 故障隔离
 
