@@ -1,10 +1,13 @@
 #include <torch/extension.h>
 
-#include "src/Decoder.h"
-#include "src/Encoder.h"
-#include "src/Yolo26DetTRT.h"
+#include "Decoder.h"
+#include "Encoder.h"
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
+    // 确保 torch 的 Python 类型已初始化：torch::Tensor 的 pybind 转换器依赖 THPVariableClass，
+    // 若使用方没有先 import torch，返回 Tensor 时会因类型对象为空而段错误。
+    py::module_::import("torch");
+
     py::class_<Decoder>(m, "Decoder")
         .def(py::init([](const std::string& filename,
                          bool               enable_frame_skip,
@@ -59,28 +62,14 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
         .def("get_fps", &Decoder::get_fps);
 
     py::class_<Encoder>(m, "Encoder")
-        .def(py::init([](const std::string& output_url, int width, int height, float fps, std::string codec, int bitrate) {
-                 return std::make_unique<Encoder>(output_url, width, height, (int)fps, codec, bitrate);
-             }),
+        .def(py::init([](const std::string& output_url, int width, int height, std::string codec, int bitrate,
+                         double fps) { return std::make_unique<Encoder>(output_url, width, height, codec, bitrate, fps); }),
              py::arg("output_url"),
              py::arg("width"),
              py::arg("height"),
-             py::arg("fps"),
              py::arg("codec")   = "libx264",
-             py::arg("bitrate") = 2000000)
-        .def("encode", &Encoder::encode, py::arg("frame"), py::arg("pts") = -1.0, py::call_guard<py::gil_scoped_release>())
+             py::arg("bitrate") = 2000000,
+             py::arg("fps")     = 25.0)
+        .def("encode", &Encoder::encode, py::arg("frame"), py::arg("pts"), py::call_guard<py::gil_scoped_release>())
         .def("finish", &Encoder::finish, py::call_guard<py::gil_scoped_release>());
-
-    py::class_<Yolo26DetTRT>(m, "Yolo26DetTRT")
-        .def(py::init<std::string, float, int>(),
-             py::arg("engine_path"),
-             py::arg("conf_thres") = 0.25f,
-             py::arg("device_id")  = 0,
-             py::call_guard<py::gil_scoped_release>())
-        .def("__call__", &Yolo26DetTRT::infer, py::arg("image_hwc_u8"), py::call_guard<py::gil_scoped_release>())
-        .def("infer", &Yolo26DetTRT::infer, py::arg("image_hwc_u8"), py::call_guard<py::gil_scoped_release>())
-        .def("input_shape", &Yolo26DetTRT::input_shape)
-        .def("output_shapes", &Yolo26DetTRT::output_shapes)
-        .def("input_names", &Yolo26DetTRT::input_names)
-        .def("output_names", &Yolo26DetTRT::output_names);
 }

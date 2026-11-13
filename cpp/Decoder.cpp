@@ -8,6 +8,8 @@
 #include <nppi_color_conversion.h>
 #include <nppi_geometry_transforms.h>
 
+#include <chrono>
+#include <cstdio>
 #include <stdexcept>
 #include <thread>
 
@@ -17,24 +19,32 @@ static std::string ff_err(int ret) {
     return std::string(buf);
 }
 
-static void sync_stream_throw(cudaStream_t stream) {
-    cudaError_t err = cudaStreamSynchronize(stream);
-    if (err != cudaSuccess) {
-        throw std::runtime_error(std::string("[Decoder] CUDA流同步失败: ") + cudaGetErrorString(err));
-    }
-}
-
 static void sync_stream_noexcept(cudaStream_t stream) {
     cudaStreamSynchronize(stream);
 }
 
+// 复用输出显存：尺寸不变时不再分配。注意返回的 Tensor 会在下一次调用时被覆盖，
+// 调用方若需要保留旧帧，请在调用 next_frame() 前自行拷贝（例如 .cpu()）。
+static torch::Tensor& reusable_buf(torch::Tensor& cache, int h, int w) {
+    static const auto options =
+        torch::TensorOptions().dtype(torch::kUInt8).device(torch::kCUDA).layout(torch::kStrided);
+    if (!cache.defined() || cache.size(0) != h || cache.size(1) != w) {
+        cache = torch::empty({h, w, 3}, options);
+    }
+    return cache;
+}
+
 static enum AVPixelFormat get_hw_format(AVCodecContext* ctx, const enum AVPixelFormat* pix_fmts) {
-    const enum AVPixelFormat* p;
-    for (p = pix_fmts; *p != -1; p++) {
+    // 注意：这是 FFmpeg 的 C 回调，不能抛 C++ 异常，否则会 terminate 进程
+    for (const enum AVPixelFormat* p = pix_fmts; *p != AV_PIX_FMT_NONE; p++) {
         if (*p == AV_PIX_FMT_CUDA)
             return *p;
     }
-    throw std::runtime_error("[Decoder] 无法获取硬件解码表面格式");
+    fprintf(stderr, "[Decoder] get_format 回调中未提供 AV_PIX_FMT_CUDA, 候选格式:");
+    for (const enum AVPixelFormat* p = pix_fmts; *p != AV_PIX_FMT_NONE; p++)
+        fprintf(stderr, " %s", av_get_pix_fmt_name(*p));
+    fprintf(stderr, "\n");
+    return AV_PIX_FMT_NONE;
 }
 
 Decoder::Decoder(const std::string& filename,
@@ -71,6 +81,8 @@ Decoder::Decoder(const std::string& filename,
     try {
         init_ffmpeg(filename);
     } catch (const std::exception& e) {
+        // 构造失败时对象析构函数不会执行，必须手动释放已分配的资源
+        cleanup();
         bool is_stream = filename.rfind("rtsp://", 0) == 0 || filename.rfind("rtp://", 0) == 0;
         if (!is_stream) {
             throw;
@@ -182,16 +194,36 @@ void Decoder::init_ffmpeg(const std::string& filename) {
         codec_ctx->extra_hw_frames = surfaces;
     }
 
-    if (avcodec_open2(codec_ctx, codec, nullptr) < 0) {
-        throw std::runtime_error("[Decoder] 打开解码器失败");
+    int open_ret = avcodec_open2(codec_ctx, codec, nullptr);
+    if (open_ret < 0) {
+        std::string hint;
+        if (hwaccel == "cuda") {
+            hint = "（NVDEC 可能不支持该码流的 Profile/像素格式，例如 4:4:4；可改用 hwaccel=\"none\" 或把视频转码为 yuv420p）";
+        }
+        throw std::runtime_error(std::string("[Decoder] 打开解码器失败(") + codec->name + "): " + ff_err(open_ret) + hint);
     }
 
+    // 校验硬件帧的软件像素格式：NPP 的 NV12→BGR 转换只支持 NV12（8bit 4:2:0）
+    sw_format = AV_PIX_FMT_NONE;
     if (codec_ctx->hw_frames_ctx) {
         AVHWFramesContext* frames_ctx = reinterpret_cast<AVHWFramesContext*>(codec_ctx->hw_frames_ctx->data);
         if (frames_ctx) {
-            int pool_size = frames_ctx->initial_pool_size;
-            std::cerr << "[Decoder] 当前硬件解码帧池大小: " << source_url << ", 大小: " << pool_size << std::endl;
+            sw_format = frames_ctx->sw_format;
+            std::cerr << "[Decoder] 硬件解码帧池: " << source_url << ", 池大小: " << frames_ctx->initial_pool_size
+                      << ", 像素格式: "
+                      << (av_get_pix_fmt_name(sw_format) ? av_get_pix_fmt_name(sw_format) : "unknown") << std::endl;
         }
+    }
+    if (codec_ctx->pix_fmt == AV_PIX_FMT_CUDA && sw_format != AV_PIX_FMT_NV12) {
+        const char* fmt_name = av_get_pix_fmt_name(sw_format);
+        throw std::runtime_error(std::string("[Decoder] 硬件解码输出格式为 ") + (fmt_name ? fmt_name : "unknown") +
+                                 "，当前 NPP 颜色转换仅支持 NV12（8bit 4:2:0）。"
+                                 "请改用 hwaccel=\"none\"，或把视频转码为 yuv420p 后再解码");
+    }
+
+    NppStatus npp_status = nppGetStreamContext(&npp_stream_ctx_);
+    if (npp_status != NPP_SUCCESS) {
+        throw std::runtime_error("[Decoder] nppGetStreamContext 失败, 错误码: " + std::to_string(npp_status));
     }
 
     decode_width  = codec_ctx->width;
@@ -213,7 +245,7 @@ void Decoder::init_ffmpeg(const std::string& filename) {
 void Decoder::cleanup() {
     if (frame) av_frame_unref(frame);
     if (packet) av_packet_unref(packet);
-    if (codec_ctx) avcodec_flush_buffers(codec_ctx);
+    if (codec_ctx && avcodec_is_open(codec_ctx)) avcodec_flush_buffers(codec_ctx);
     if (frame) av_frame_free(&frame);
     if (packet) av_packet_free(&packet);
     if (codec_ctx) avcodec_free_context(&codec_ctx);
@@ -324,17 +356,12 @@ std::pair<torch::Tensor, double> Decoder::next_frame() {
             std::cerr << "[Decoder] 检测到分辨率变化: " << source_url << ", 新分辨率: " << decode_width << "x" << decode_height << std::endl;
         }
 
-        cudaStream_t     stream = c10::cuda::getCurrentCUDAStream().stream();
-        NppStreamContext npp_stream_ctx;
-        NppStatus        npp_stream_status = nppGetStreamContext(&npp_stream_ctx);
-        if (npp_stream_status != NPP_SUCCESS) {
-            throw std::runtime_error("[Decoder] nppGetStreamContext 失败, 错误码: " + std::to_string(npp_stream_status));
-        }
-        npp_stream_ctx.hStream = stream;
+        cudaStream_t stream = c10::cuda::getCurrentCUDAStream().stream();
+        // 流上下文只在这里更新 hStream，避免每帧调用 nppGetStreamContext
+        npp_stream_ctx_.hStream = stream;
 
-        auto          options = torch::TensorOptions().dtype(torch::kUInt8).device(torch::kCUDA).layout(torch::kStrided);
-        torch::Tensor bgr     = torch::empty({frame_h, frame_w, 3}, options);
-        const Npp8u*  pSrc[2];
+        torch::Tensor& bgr = reusable_buf(bgr_buf_, frame_h, frame_w);
+        const Npp8u*   pSrc[2];
         pSrc[0]           = (const Npp8u*)f->data[0];
         pSrc[1]           = (const Npp8u*)f->data[1];
         int      nSrcStep = f->linesize[0];
@@ -343,16 +370,16 @@ std::pair<torch::Tensor, double> Decoder::next_frame() {
         NppiSize oSizeROI;
         oSizeROI.width   = frame_w;
         oSizeROI.height  = frame_h;
-        NppStatus status = nppiNV12ToBGR_8u_P2C3R_Ctx(pSrc, nSrcStep, pDst, nDstStep, oSizeROI, npp_stream_ctx);
+        NppStatus status = nppiNV12ToBGR_8u_P2C3R_Ctx(pSrc, nSrcStep, pDst, nDstStep, oSizeROI, npp_stream_ctx_);
         if (status != NPP_SUCCESS) {
             throw std::runtime_error("[Decoder] NPP NV12→BGR 颜色转换失败, 错误码: " + std::to_string(status));
         }
 
         torch::Tensor out = bgr;
         if (width != frame_w || height != frame_h) {
-            torch::Tensor resized    = torch::empty({height, width, 3}, options);
-            const Npp8u*  pResizeSrc = bgr.data_ptr<uint8_t>();
-            Npp8u*        pResizeDst = resized.data_ptr<uint8_t>();
+            torch::Tensor& resized = reusable_buf(resized_buf_, height, width);
+            const Npp8u*   pResizeSrc = bgr.data_ptr<uint8_t>();
+            Npp8u*         pResizeDst = resized.data_ptr<uint8_t>();
 
             NppiSize srcSize;
             srcSize.width  = frame_w;
@@ -388,13 +415,14 @@ std::pair<torch::Tensor, double> Decoder::next_frame() {
                 0.0,
                 0.0,
                 NPPI_INTER_LINEAR,
-                npp_stream_ctx);
+                npp_stream_ctx_);
             if (resize_status != NPP_SUCCESS) {
                 throw std::runtime_error("[Decoder] NPP 尺寸缩放失败, 错误码: " + std::to_string(resize_status));
             }
             out = resized;
         }
-        sync_stream_throw(stream);
+        // 不做显式 cudaStreamSynchronize：NPP 与后续 torch 操作都在同一个流上按序执行。
+        // 硬件帧的归还依赖 FFmpeg 帧池深度（surfaces），NPP 转换耗时远小于重新解码一帧，因此不会读到未就绪的帧。
         return out;
     };
 

@@ -4,8 +4,10 @@ import subprocess
 from setuptools import setup
 from torch.utils.cpp_extension import BuildExtension, CUDAExtension, library_paths
 
-MODULE_NAME = "pvp"
-MODULE_VERSION = "0.1.1"
+MODULE_NAME = "cpp"
+MODULE_VERSION = "0.0.1"
+
+HERE = os.path.dirname(os.path.abspath(__file__))
 
 os.environ.setdefault("CC", "gcc")
 os.environ.setdefault("CXX", "g++")
@@ -70,16 +72,18 @@ setup(
         CUDAExtension(
             MODULE_NAME,
             [
-                "cpp/src/Decoder.cpp",
-                "cpp/src/Encoder.cpp",
-                "cpp/src/Yolo26DetTRT.cpp",
-                "cpp/src/preprocess.cu",
-                "cpp/bindings.cpp",
+                os.path.join(HERE, "Decoder.cpp"),
+                os.path.join(HERE, "Encoder.cpp"),
+                os.path.join(HERE, "bindings.cpp"),
             ],
             include_dirs=include_dirs,
             library_dirs=library_dirs,
             libraries=libraries,
-            extra_compile_args={"cxx": ["-std=c++17"], "nvcc": ["-O3", "-std=c++17"]},
+            extra_compile_args={
+                # 与 torch 自带 pybind11 的可见性保持一致，消除 -Wattributes 警告
+                "cxx": ["-std=c++17", "-fvisibility=hidden"],
+                "nvcc": ["-O3", "-std=c++17", "-Xcompiler=-fvisibility=hidden"],
+            },
             extra_link_args=extra_link_args,
         )
     ],

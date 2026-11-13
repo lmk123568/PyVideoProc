@@ -16,6 +16,8 @@ extern "C" {
 #include <libavutil/pixdesc.h>
 }
 
+#include <npp.h>
+
 class Decoder {
 public:
     Decoder(const std::string &filename,
@@ -84,4 +86,12 @@ private:
     double      last_output_pts     = -1.0;
     double      nominal_frame_delta = 0.0;
     double      pts_offset          = 0.0;
+
+    // NPP 流上下文：构造时初始化一次，每帧只更新 hStream
+    NppStreamContext npp_stream_ctx_{};
+    // 硬件帧的软件像素格式（NPP 目前仅支持 NV12）
+    AVPixelFormat    sw_format = AV_PIX_FMT_NONE;
+    // 输出显存复用，避免每帧 torch::empty；注意：下一次 next_frame() 会覆盖其内容
+    torch::Tensor    bgr_buf_;
+    torch::Tensor    resized_buf_;
 };

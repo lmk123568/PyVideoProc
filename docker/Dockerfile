@@ -7,5 +7,5 @@ RUN \
     sed -i "s/httpredir.debian.org\/debian-security/mirrors.aliyun.com\/debian-security/g" /etc/apt/sources.list && \
     apt update -y && \
     apt install -y --no-install-recommends ffmpeg vim pkg-config libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libswresample-dev && \
-    pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple ultralytics onnx onnxslim tensorrt supervision && \
+    pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple ultralytics onnx onnxslim tensorrt lap && \
     rm -rf /var/lib/apt/lists/*
