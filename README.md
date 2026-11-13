@@ -9,11 +9,18 @@
     <img src="https://img.shields.io/badge/license-BSD--2-blue.svg?&logo=c&logoColor=white&style=for-the-badge">
 </p>
 
+
 用 Python 在 CUDA  上高效实现多路、多卡、多模型的视频流解码推理跟踪分析，并显著降低开发复杂度
 
 Effortless multi-stream, multi-GPU, multi-model video analytics on CUDA — decode, infer, track, and analyze in pure Python.
 
-[https://github.com/user-attachments/assets/402f9080-004e-457e-8d36-3fefdb56f21d](https://github.com/user-attachments/assets/bb12981c-ac43-40c8-a802-983671356646)
+RTX 3060 实现 16 路并发：
+
+https://github.com/user-attachments/assets/79d92ff3-3c2d-47eb-8547-294a3b1039c4
+
+支持多任务：
+
+https://github.com/user-attachments/assets/1d028214-bc72-4a95-a834-65e1d4e87324
 
 核心特性：
 
@@ -27,7 +34,7 @@ Effortless multi-stream, multi-GPU, multi-model video analytics on CUDA — deco
 
 - 工业级流媒体健壮性：自动重连 / 超时控制 / B 帧重排 / 抖动缓冲 / 故障隔离
 
-- Docker 一键部署，pt→engine 自动转换并与官方推理结果对齐验证
+- Docker 一键部署，pt -> engine 转换并与官方推理结果对齐验证
 
 - 开箱即部署，声明式配置，简单易懂，易于扩展
 
@@ -38,13 +45,13 @@ Effortless multi-stream, multi-GPU, multi-model video analytics on CUDA — deco
 | [VideoPipe](https://github.com/sherlockchou86/VideoPipe)  |      ✅      | Medium（requires cpp knowledge） | Medium（requires cpp knowledge） |   Medium    | Single-process, multi-threaded |
 |                            Our                            |      ✅      |               ≈ 0                |              High 🥰              |   Medium    | Multi-process, single-threaded |
 
-配套视频：
+配套视频（老版）：
 
 [![Bilibili](https://img.shields.io/badge/Bilibili-BV12TcvzbEcZ-FB7299?style=for-the-badge&logo=bilibili&logoColor=white)](https://www.bilibili.com/video/BV12TcvzbEcZ)  [![YouTube](https://img.shields.io/badge/YouTube---soVRjH1rb4-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/-soVRjH1rb4)
 
 ## Quick Start
 
-本项目推荐 Docker 容器运行，首先确保本地环境满足以下三个条件：
+本项目推荐 Docker 容器运行开发，首先确保本地环境满足以下三个条件：
 
 - Docker >= 24.0.0
 - NVIDIA Driver >= 590
@@ -52,7 +59,7 @@ Effortless multi-stream, multi-GPU, multi-model video analytics on CUDA — deco
 
 ### 1. 生成镜像
 
-clone 本项目，生成包含完整开发环境的镜像
+Clone 本项目，生成包含完整开发环境的镜像
 
 ```bash
 git clone https://github.com/lmk123568/PyVideoProc.git
@@ -72,32 +79,46 @@ docker run -it \
   bash
 ```
 
-后续示例代码默认在容器内`/workspace`运行
+后续示例代码默认在容器内目录 `/workspace` 运行
 
-> ⚠️ 不推荐自己本地装环境，如果一定要自己装，请参考 Dockerfile
+> ⚠️ 不建议本地装环境开发（包依赖比较麻烦），如果一定要自己装，请参考 Dockerfile
 
 ### 2. 编译加速包
 
 ```bash
-pip install .
-# pip install -e .  # 开发模式
+python cpp/setup.py build_ext --inplace
 ```
 
-这里面包含了硬件编解码、YOLO26 推理优化的 C++ 实现，并通过 Pybind11 给 Python 调用
+这里面包含了硬件编解码 CPP 实现，并通过 Torch Extension 给 Python 调用
 
-### 3. 训练模型权重转换
+### 3. 模型权重转换
 
-将通过 [ultralytics](https://github.com/ultralytics/ultralytics) 训练的`pt`模型导入到当前目录（`/workspace`）下（示例模型为 [yolo26n.pt](https://github.com/ultralytics/assets/releases/download/v8.4.0/yolo26n.pt)）
+将通过 [ultralytics](https://github.com/ultralytics/ultralytics) 训练的 pt 模型导入到当前目录 `/workspace` 下，以官方 yolo26n.pt 为例
 
 ```bash
-python pt2trt.py  --w ./yolo26n.pt --fp16
+# 导出 engine 权重
+yolo export model=yolo26n.pt format=engine imgsz=512,1024 quantize=16 nms=False
+# （可选）测试精度是否对齐
+python -m yolo26.det --engine ./yolo26n.engine
 ```
 
- 转换过程中会与 ultralytics 官方结果进行推理对齐
+> 💡 编译生成 engine 时，imgsz 建议设置 (576,1024)，可以跳过 letterbox 降低计算开销，如果是 Jetson 这种边缘设备，imgsz 建议设置 (352, 640)
 
-> 💡 TensorRT 编译生成 .engine 过程中，推理尺寸默认设置为`(576,1024)`，可以跳过`letterbox`降低计算开销
+> 💡 遇到 `requirements: Ultralytics requirement ['onnxruntime-gpu'] not found ...` 可以 `Ctrl+C` 跳过
 
-> 💡 遇到警告 `requirements: Ultralytics requirement ['onnxruntime-gpu'] not found ...` 可以 `Ctrl + C` 跳过
+其它任务支持如下
+
+```bash
+# 分类
+yolo export model=yolo26n-cls.pt format=engine imgsz=224,224 quantize=16 nms=False
+python -m yolo26.cls --engine ./yolo26n-cls.engine
+# 语义分割
+yolo export model=yolo26n-sem.pt format=engine imgsz=512,1024 quantize=16 nms=False
+python -m yolo26.sem --engine ./yolo26n-sem.engine
+# 姿态估计
+yolo export model=yolo26n-pose.pt format=engine imgsz=512,1024 quantize=16 nms=False
+python -m yolo26.pose --engine ./yolo26n-pose.engine
+```
 
 ### 4. 运行
 
@@ -108,7 +129,7 @@ nvidia-cuda-mps-control -d
 # echo quit | nvidia-cuda-mps-control  关闭 MPS
 ```
 
-阅读理解其代码并运行
+⭐⭐⭐ 阅读理解其代码并运行
 
 ```bash
 python main.py
@@ -133,9 +154,9 @@ python main.py
   <img src="assets/pvp_architecture.svg" alt="architecture" style="width: 80%" />
 </p>
 
-多进程单批推理的架构缺点是吃显存，但换来的是天级交付周期、无需专业背景的维护门槛、天然的掉线隔离，以及可预期的故障排查路径
+多进程单批推理的架构缺点是吃显存，但换来的是天级交付周期、无需专业背景的维护门槛、天然的掉线隔离，以及可预期的故障排查路径。对于摄像头频繁掉线、网络不稳定、团队技术储备有限的现场环境，这个取舍或许理论性能更优的方案更合适
 
-对于摄像头频繁掉线、网络不稳定、团队技术储备有限的现场环境，这个取舍比理论性能更优的方案更合适
+基于本方案架构的实现已在业务场景落地 5000 多路
 
 🔥🔥🔥 RK3588 版本实现：[PyVideoProc_RK3588](https://github.com/lmk123568/PyVideoProc_RK3588)
 
