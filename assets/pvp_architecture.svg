@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 860" font-family="Segoe UI, Microsoft YaHei, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 900" font-family="Segoe UI, Microsoft YaHei, sans-serif">
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
       <path d="M0,0 L8,3 L0,6 Z" fill="#555"/>
@@ -8,10 +8,11 @@
     </marker>
   </defs>
   <style>
-    .box { fill:#ffffff; stroke:#90a4ae; stroke-width:1.5; rx:10; }
+    .box { fill:#ffffff; stroke:#90a4ae; stroke-width:1.5; }
     .gpuBox { fill:#f1f8e9; stroke:#7cb342; stroke-width:1.5; }
     .cpuBox { fill:#fff8e1; stroke:#ffb300; stroke-width:1.5; }
     .ioBox { fill:#e3f2fd; stroke:#42a5f5; stroke-width:1.5; }
+    .prepBox { fill:#fce4ec; stroke:#ec407a; stroke-width:1.5; }
     .title { font-size:15px; font-weight:700; fill:#263238; }
     .txt { font-size:12.5px; fill:#37474f; }
     .small { font-size:11px; fill:#607d8b; }
@@ -23,143 +24,148 @@
   <text x="620" y="34" text-anchor="middle" font-size="22" font-weight="800" fill="#1a237e">PyVideoProc 架构：多进程 · 单批推理</text>
   <text x="620" y="56" text-anchor="middle" class="small">Multi-Process (bypass GIL) × Per-Process Single-Stream Pipeline (Decode → TRT Infer → Track → Encode)</text>
 
-  <!-- ===== Input sources ===== -->
-  <rect x="30" y="330" width="150" height="60" class="ioBox" rx="10"/>
-  <text x="105" y="356" text-anchor="middle" class="title">RTSP 流 × N</text>
-  <text x="105" y="376" text-anchor="middle" class="small">网络相机 / 拉流</text>
-
-  <rect x="30" y="420" width="150" height="60" class="ioBox" rx="10"/>
-  <text x="105" y="446" text-anchor="middle" class="title">本地视频文件</text>
-  <text x="105" y="466" text-anchor="middle" class="small">input.mp4 …</text>
+  <!-- ===== Offline preparation ===== -->
+  <rect x="240" y="72" width="760" height="62" class="prepBox" rx="10"/>
+  <text x="260" y="94" font-size="13" font-weight="700" fill="#ad1457">离线准备（一次性）</text>
+  <text x="260" y="120" class="txt">① yolo export → .engine（FP16, nms=False）  →  ② python -m yolo26.det 精度对齐  →  ③ cpp/setup.py build_ext 编译加速包</text>
 
   <!-- ===== Main process ===== -->
-  <rect x="240" y="90" width="760" height="130" class="box" rx="12"/>
-  <text x="260" y="116" class="title">主进程 main.py（控制面，不占 GPU 算力）</text>
-  <rect x="260" y="130" width="160" height="66" class="ioBox" rx="8"/>
-  <text x="340" y="156" text-anchor="middle" class="txt">① 流配置列表</text>
-  <text x="340" y="176" text-anchor="middle" class="small">gpu / input / output</text>
-  <rect x="440" y="130" width="160" height="66" class="ioBox" rx="8"/>
-  <text x="520" y="156" text-anchor="middle" class="txt">② 按 GPU 分组</text>
-  <text x="520" y="176" text-anchor="middle" class="small">同卡配置归为一组</text>
-  <rect x="620" y="130" width="170" height="66" class="ioBox" rx="8"/>
-  <text x="705" y="150" text-anchor="middle" class="txt">③ spawn 交错启动</text>
-  <text x="705" y="168" text-anchor="middle" class="small">组间延时 5s 防 RTSP 风暴</text>
-  <text x="705" y="186" text-anchor="middle" class="small">独立 CUDA 上下文</text>
-  <rect x="810" y="130" width="170" height="66" class="ioBox" rx="8"/>
-  <text x="895" y="150" text-anchor="middle" class="txt">④ CUDA MPS</text>
-  <text x="895" y="168" text-anchor="middle" class="small">多进程共享同卡算力</text>
-  <text x="895" y="186" text-anchor="middle" class="small">nvidia-cuda-mps-control</text>
-  <path d="M420 163 H440 M600 163 H620 M790 163 H810" stroke="#555" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect x="240" y="160" width="760" height="124" class="box" rx="12"/>
+  <text x="260" y="186" class="title">主进程 main.py（控制面，不占 GPU 算力）</text>
+  <rect x="260" y="198" width="160" height="66" class="ioBox" rx="8"/>
+  <text x="340" y="222" text-anchor="middle" class="txt">① 声明式流配置</text>
+  <text x="340" y="240" text-anchor="middle" class="small">gpu / input / output</text>
+  <text x="340" y="256" text-anchor="middle" class="small">一个 dict 即一路流</text>
+  <rect x="440" y="198" width="160" height="66" class="ioBox" rx="8"/>
+  <text x="520" y="222" text-anchor="middle" class="txt">② spawn 启动</text>
+  <text x="520" y="240" text-anchor="middle" class="small">独立 CUDA 上下文</text>
+  <text x="520" y="256" text-anchor="middle" class="small">CUDA_VISIBLE_DEVICES 绑卡</text>
+  <rect x="620" y="198" width="170" height="66" class="ioBox" rx="8"/>
+  <text x="705" y="222" text-anchor="middle" class="txt">③ 逐路延时启动</text>
+  <text x="705" y="240" text-anchor="middle" class="small">间隔 3s，避免大量 RTSP</text>
+  <text x="705" y="256" text-anchor="middle" class="small">同时连接冲垮网络</text>
+  <rect x="810" y="198" width="170" height="66" class="ioBox" rx="8"/>
+  <text x="895" y="222" text-anchor="middle" class="txt">④ CUDA MPS</text>
+  <text x="895" y="240" text-anchor="middle" class="small">多进程共享同卡算力</text>
+  <text x="895" y="256" text-anchor="middle" class="small">nvidia-cuda-mps-control</text>
+  <path d="M420 231 H440 M600 231 H620 M790 231 H810" stroke="#555" stroke-width="1.6" marker-end="url(#arrow)"/>
 
-  <!-- input to main -->
-  <path d="M105 330 C105 260 105 155 240 155" fill="none" stroke="#555" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <path d="M180 450 C215 450 200 200 240 190" fill="none" stroke="#555" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <!-- ===== Input sources ===== -->
+  <rect x="30" y="380" width="150" height="60" class="ioBox" rx="10"/>
+  <text x="105" y="406" text-anchor="middle" class="title">RTSP 流 × N</text>
+  <text x="105" y="426" text-anchor="middle" class="small">网络相机 / 拉流</text>
+  <rect x="30" y="470" width="150" height="60" class="ioBox" rx="10"/>
+  <text x="105" y="496" text-anchor="middle" class="title">本地视频文件</text>
+  <text x="105" y="516" text-anchor="middle" class="small">input.mp4 …</text>
+  <path d="M105 380 C105 300 105 231 240 231" fill="none" stroke="#555" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <path d="M180 500 C215 500 200 260 240 250" fill="none" stroke="#555" stroke-width="1.6" marker-end="url(#arrow)"/>
 
-  <!-- ===== Pipeline process card template ===== -->
-  <!-- Process 1 -->
+  <!-- ===== Pipeline process 1 (detailed) ===== -->
   <g>
-    <rect x="240" y="260" width="470" height="560" class="box" rx="14"/>
-    <rect x="240" y="260" width="470" height="40" rx="14" fill="#ede7f6" stroke="#7e57c2" stroke-width="1.5"/>
-    <text x="475" y="286" text-anchor="middle" font-size="15" font-weight="700" fill="#4527a0">Pipeline 进程 1（mp.Process · 单线程）CUDA_VISIBLE_DEVICES=0</text>
+    <rect x="240" y="330" width="470" height="540" class="box" rx="14"/>
+    <rect x="240" y="330" width="470" height="40" rx="14" fill="#ede7f6" stroke="#7e57c2" stroke-width="1.5"/>
+    <text x="475" y="356" text-anchor="middle" font-size="15" font-weight="700" fill="#4527a0">Pipeline 进程 1（mp.Process · 单线程）CUDA_VISIBLE_DEVICES=0</text>
 
     <!-- GPU zone -->
-    <rect x="258" y="316" width="434" height="180" class="gpuBox" rx="10"/>
-    <text x="274" y="340" class="hdr">GPU 计算区（零冗余拷贝，帧不出显存）</text>
-    <rect x="274" y="352" width="190" height="56" class="box" rx="8"/>
-    <text x="369" y="375" text-anchor="middle" class="txt">pvp.Decoder</text>
-    <text x="369" y="394" text-anchor="middle" class="small">FFmpeg + NVDEC 硬解</text>
-    <rect x="486" y="352" width="190" height="56" class="box" rx="8"/>
-    <text x="581" y="375" text-anchor="middle" class="txt">CUDA Surfaces ×3</text>
-    <text x="581" y="394" text-anchor="middle" class="small">GPU 帧缓冲（缩放至 1024×576）</text>
-    <path d="M464 380 H486" stroke="#2e7d32" stroke-width="1.8" marker-end="url(#arrowG)"/>
-    <rect x="274" y="424" width="190" height="56" class="box" rx="8"/>
-    <text x="369" y="447" text-anchor="middle" class="txt">pvp.Yolo26DetTRT</text>
-    <text x="369" y="466" text-anchor="middle" class="small">TensorRT FP16 · batch=1</text>
-    <rect x="486" y="424" width="190" height="56" class="box" rx="8"/>
-    <text x="581" y="447" text-anchor="middle" class="txt">可串联更多 GPU 模型</text>
-    <text x="581" y="466" text-anchor="middle" class="small">cls / seg / pose … 均为 GPU 张量</text>
-    <path d="M581 408 V424 M369 408 V424 M464 452 H486" stroke="#2e7d32" stroke-width="1.8" marker-end="url(#arrowG)"/>
+    <rect x="258" y="384" width="434" height="184" class="gpuBox" rx="10"/>
+    <text x="274" y="408" class="hdr">GPU 计算区（帧驻留显存 · 零冗余拷贝）</text>
+    <rect x="274" y="420" width="190" height="56" class="box" rx="8"/>
+    <text x="369" y="443" text-anchor="middle" class="txt">cpp.Decoder</text>
+    <text x="369" y="462" text-anchor="middle" class="small">FFmpeg + NVDEC 硬解 · 免 letterbox</text>
+    <rect x="486" y="420" width="190" height="56" class="box" rx="8"/>
+    <text x="581" y="443" text-anchor="middle" class="txt">CUDA Surfaces ×3</text>
+    <text x="581" y="462" text-anchor="middle" class="small">输出尺寸 = 引擎输入尺寸</text>
+    <path d="M464 448 H486" stroke="#2e7d32" stroke-width="1.8" marker-end="url(#arrowG)"/>
+    <rect x="274" y="492" width="190" height="56" class="box" rx="8"/>
+    <text x="369" y="515" text-anchor="middle" class="txt">yolo26.det（YOLO26DetTRT）</text>
+    <text x="369" y="534" text-anchor="middle" class="small">TensorRT FP16 · batch=1</text>
+    <rect x="486" y="492" width="190" height="56" class="box" rx="8"/>
+    <text x="581" y="515" text-anchor="middle" class="txt">级联 Cls / Sem / Pose TRT</text>
+    <text x="581" y="534" text-anchor="middle" class="small">中间张量不出显存</text>
+    <path d="M369 476 V492 M581 476 V492 M464 520 H486" stroke="#2e7d32" stroke-width="1.8" marker-end="url(#arrowG)"/>
 
     <!-- D2H -->
-    <path d="M475 496 V522" stroke="#c62828" stroke-width="2" marker-end="url(#arrow)" stroke-dasharray="5,3"/>
-    <text x="486" y="514" class="small" fill="#c62828">仅结果一次 D2H（检测框 numpy）</text>
+    <path d="M475 568 V594" stroke="#c62828" stroke-width="2" marker-end="url(#arrow)" stroke-dasharray="5,3"/>
+    <text x="486" y="590" class="small" fill="#c62828">仅检测框 Nx6 一次 D2H</text>
 
     <!-- CPU zone -->
-    <rect x="258" y="526" width="434" height="160" class="cpuBox" rx="10"/>
-    <text x="274" y="550" class="hdrC">CPU 计算区</text>
-    <rect x="274" y="560" width="128" height="52" class="box" rx="8"/>
-    <text x="338" y="583" text-anchor="middle" class="txt">ByteTrack 跟踪</text>
-    <text x="338" y="601" text-anchor="middle" class="small">supervision</text>
-    <rect x="418" y="560" width="128" height="52" class="box" rx="8"/>
-    <text x="482" y="583" text-anchor="middle" class="txt">可视化绘制</text>
-    <text x="482" y="601" text-anchor="middle" class="small">框/ID/轨迹</text>
-    <rect x="562" y="560" width="114" height="52" class="box" rx="8"/>
-    <text x="619" y="583" text-anchor="middle" class="txt">业务逻辑</text>
-    <text x="619" y="601" text-anchor="middle" class="small">事件/告警</text>
-    <path d="M402 586 H418 M546 586 H562" stroke="#555" stroke-width="1.6" marker-end="url(#arrow)"/>
-    <rect x="274" y="626" width="402" height="46" class="box" rx="8"/>
-    <text x="475" y="647" text-anchor="middle" class="txt">pvp.Encoder（libx264 软编，保序 pts）</text>
-    <text x="475" y="664" text-anchor="middle" class="small">CPU 编码，释放 GPU 资源给推理</text>
-    <path d="M338 612 V626 M482 612 V626" stroke="#555" stroke-width="1.4" marker-end="url(#arrow)"/>
+    <rect x="258" y="598" width="434" height="158" class="cpuBox" rx="10"/>
+    <text x="274" y="622" class="hdrC">CPU 计算区</text>
+    <rect x="274" y="632" width="128" height="52" class="box" rx="8"/>
+    <text x="338" y="655" text-anchor="middle" class="txt">FastByteTracker</text>
+    <text x="338" y="673" text-anchor="middle" class="small">bytetrack 包 Nx6→Nx7</text>
+    <rect x="418" y="632" width="128" height="52" class="box" rx="8"/>
+    <text x="482" y="655" text-anchor="middle" class="txt">osd.draw_bbox</text>
+    <text x="482" y="673" text-anchor="middle" class="small">轻量 OSD 绘制</text>
+    <rect x="562" y="632" width="114" height="52" class="box" rx="8"/>
+    <text x="619" y="655" text-anchor="middle" class="txt">业务逻辑</text>
+    <text x="619" y="673" text-anchor="middle" class="small">事件 / 告警</text>
+    <path d="M402 658 H418 M546 658 H562" stroke="#555" stroke-width="1.6" marker-end="url(#arrow)"/>
+    <rect x="274" y="698" width="402" height="46" class="box" rx="8"/>
+    <text x="475" y="719" text-anchor="middle" class="txt">cpp.Encoder（libx264 · fps = 实际处理帧率）</text>
+    <text x="475" y="736" text-anchor="middle" class="small">CPU 编码释放 GPU · finish() 冲刷保文件完整</text>
+    <path d="M338 684 V698 M482 684 V698" stroke="#555" stroke-width="1.4" marker-end="url(#arrow)"/>
 
     <!-- output -->
-    <rect x="258" y="710" width="434" height="56" class="ioBox" rx="8"/>
-    <text x="475" y="734" text-anchor="middle" class="txt">输出：RTMP 推流 / output_annotated.mp4</text>
-    <text x="475" y="753" text-anchor="middle" class="small">异常自动重连（超时/重试/坏帧计数），整路崩溃不影响其他进程</text>
-    <path d="M475 672 V710" stroke="#555" stroke-width="1.6" marker-end="url(#arrow)"/>
+    <rect x="258" y="784" width="434" height="56" class="ioBox" rx="8"/>
+    <text x="475" y="808" text-anchor="middle" class="txt">输出：RTMP 推流 / output_annotated.mp4</text>
+    <text x="475" y="827" text-anchor="middle" class="small">解码自动重连（超时/重试/坏帧计数）· 单路故障隔离</text>
+    <path d="M475 744 V784" stroke="#555" stroke-width="1.6" marker-end="url(#arrow)"/>
   </g>
 
-  <!-- Process 2 (compact) -->
+  <!-- ===== Pipeline process 2 (compact) ===== -->
   <g>
-    <rect x="750" y="260" width="250" height="260" class="box" rx="14"/>
-    <rect x="750" y="260" width="250" height="40" rx="14" fill="#ede7f6" stroke="#7e57c2" stroke-width="1.5"/>
-    <text x="875" y="286" text-anchor="middle" font-size="14" font-weight="700" fill="#4527a0">Pipeline 进程 2</text>
-    <rect x="768" y="316" width="214" height="46" class="gpuBox" rx="8"/>
-    <text x="875" y="337" text-anchor="middle" class="txt">GPU：Decoder → YOLO TRT</text>
-    <text x="875" y="354" text-anchor="middle" class="small">batch=1 · 帧驻留显存</text>
-    <path d="M875 362 V380" stroke="#c62828" stroke-width="1.6" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
-    <rect x="768" y="384" width="214" height="46" class="cpuBox" rx="8"/>
-    <text x="875" y="405" text-anchor="middle" class="txt">CPU：Track → Draw → Encode</text>
-    <text x="875" y="422" text-anchor="middle" class="small">ByteTrack + libx264</text>
-    <path d="M875 430 V448" stroke="#555" stroke-width="1.6" marker-end="url(#arrow)"/>
-    <rect x="768" y="452" width="214" height="46" class="ioBox" rx="8"/>
-    <text x="875" y="473" text-anchor="middle" class="txt">RTMP / MP4 输出</text>
-    <text x="875" y="490" text-anchor="middle" class="small">自动重连 · 故障隔离</text>
+    <rect x="750" y="330" width="250" height="250" class="box" rx="14"/>
+    <rect x="750" y="330" width="250" height="40" rx="14" fill="#ede7f6" stroke="#7e57c2" stroke-width="1.5"/>
+    <text x="875" y="356" text-anchor="middle" font-size="14" font-weight="700" fill="#4527a0">Pipeline 进程 2</text>
+    <rect x="768" y="386" width="214" height="46" class="gpuBox" rx="8"/>
+    <text x="875" y="407" text-anchor="middle" class="txt">GPU：Decoder → YOLO TRT</text>
+    <text x="875" y="424" text-anchor="middle" class="small">batch=1 · 帧驻留显存</text>
+    <path d="M875 432 V450" stroke="#c62828" stroke-width="1.6" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+    <rect x="768" y="454" width="214" height="46" class="cpuBox" rx="8"/>
+    <text x="875" y="475" text-anchor="middle" class="txt">CPU：Track → OSD → Encode</text>
+    <text x="875" y="492" text-anchor="middle" class="small">FastByteTracker + libx264</text>
+    <path d="M875 500 V518" stroke="#555" stroke-width="1.6" marker-end="url(#arrow)"/>
+    <rect x="768" y="522" width="214" height="46" class="ioBox" rx="8"/>
+    <text x="875" y="543" text-anchor="middle" class="txt">RTMP / MP4 输出</text>
+    <text x="875" y="560" text-anchor="middle" class="small">自动重连 · 故障隔离</text>
   </g>
 
-  <!-- Process N -->
+  <!-- ===== Pipeline process N (compact) ===== -->
   <g>
-    <rect x="750" y="560" width="250" height="260" class="box" rx="14"/>
-    <rect x="750" y="560" width="250" height="40" rx="14" fill="#ede7f6" stroke="#7e57c2" stroke-width="1.5"/>
-    <text x="875" y="586" text-anchor="middle" font-size="14" font-weight="700" fill="#4527a0">Pipeline 进程 N</text>
-    <rect x="768" y="616" width="214" height="46" class="gpuBox" rx="8"/>
-    <text x="875" y="637" text-anchor="middle" class="txt">GPU：Decoder → YOLO TRT</text>
-    <text x="875" y="654" text-anchor="middle" class="small">可绑至 GPU 1 / 2 / …</text>
-    <path d="M875 662 V680" stroke="#c62828" stroke-width="1.6" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
-    <rect x="768" y="684" width="214" height="46" class="cpuBox" rx="8"/>
-    <text x="875" y="705" text-anchor="middle" class="txt">CPU：Track → Draw → Encode</text>
-    <text x="875" y="722" text-anchor="middle" class="small">单线程 · 无 GIL 竞争</text>
-    <path d="M875 730 V748" stroke="#555" stroke-width="1.6" marker-end="url(#arrow)"/>
-    <rect x="768" y="752" width="214" height="46" class="ioBox" rx="8"/>
-    <text x="875" y="773" text-anchor="middle" class="txt">RTMP / MP4 输出</text>
-    <text x="875" y="790" text-anchor="middle" class="small">多路 × 多卡 × 多模型</text>
+    <rect x="750" y="610" width="250" height="250" class="box" rx="14"/>
+    <rect x="750" y="610" width="250" height="40" rx="14" fill="#ede7f6" stroke="#7e57c2" stroke-width="1.5"/>
+    <text x="875" y="636" text-anchor="middle" font-size="14" font-weight="700" fill="#4527a0">Pipeline 进程 N</text>
+    <rect x="768" y="666" width="214" height="46" class="gpuBox" rx="8"/>
+    <text x="875" y="687" text-anchor="middle" class="txt">GPU：Decoder → YOLO TRT</text>
+    <text x="875" y="704" text-anchor="middle" class="small">可绑至 GPU 1 / 2 / …</text>
+    <path d="M875 712 V730" stroke="#c62828" stroke-width="1.6" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+    <rect x="768" y="734" width="214" height="46" class="cpuBox" rx="8"/>
+    <text x="875" y="755" text-anchor="middle" class="txt">CPU：Track → OSD → Encode</text>
+    <text x="875" y="772" text-anchor="middle" class="small">单线程 · 无 GIL 竞争</text>
+    <path d="M875 780 V798" stroke="#555" stroke-width="1.6" marker-end="url(#arrow)"/>
+    <rect x="768" y="802" width="214" height="46" class="ioBox" rx="8"/>
+    <text x="875" y="823" text-anchor="middle" class="txt">RTMP / MP4 输出</text>
+    <text x="875" y="840" text-anchor="middle" class="small">多路 × 多卡 × 多模型</text>
   </g>
 
   <!-- spawn arrows -->
-  <path d="M420 220 V260" stroke="#555" stroke-width="1.8" marker-end="url(#arrow)"/>
-  <path d="M875 220 V260" stroke="#555" stroke-width="1.8" marker-end="url(#arrow)"/>
-  <path d="M895 220 C950 220 875 500 875 560" fill="none" stroke="#555" stroke-width="1.8" marker-end="url(#arrow)"/>
-  <text x="1010" y="420" class="small" fill="#4527a0" transform="rotate(90 1010 420)">spawn …</text>
+  <path d="M420 284 V330" stroke="#555" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <path d="M875 284 V330" stroke="#555" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <path d="M895 284 C950 284 875 550 875 610" fill="none" stroke="#555" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <text x="1010" y="450" class="small" fill="#4527a0" transform="rotate(90 1010 450)">spawn …</text>
 
   <!-- legend -->
-  <rect x="30" y="560" width="180" height="260" class="box" rx="10"/>
-  <text x="120" y="586" text-anchor="middle" class="title">图例</text>
-  <rect x="46" y="600" width="20" height="14" class="gpuBox"/><text x="74" y="612" class="small">GPU 计算（绿）</text>
-  <rect x="46" y="626" width="20" height="14" class="cpuBox"/><text x="74" y="638" class="small">CPU 计算（橙）</text>
-  <rect x="46" y="652" width="20" height="14" class="ioBox"/><text x="74" y="664" class="small">输入 / 输出（蓝）</text>
-  <path d="M46 692 H66" stroke="#c62828" stroke-width="2" stroke-dasharray="5,3"/><text x="74" y="696" class="small">Host↔Device 拷贝</text>
-  <text x="46" y="726" class="small" fill="#1b5e20">核心思想：</text>
-  <text x="46" y="746" class="small">多进程绕 GIL + MPS 共享卡</text>
-  <text x="46" y="766" class="small">帧全程驻留 GPU，仅结果回 CPU</text>
-  <text x="46" y="786" class="small">推理 batch=1，进程数换并发</text>
+  <rect x="30" y="580" width="180" height="280" class="box" rx="10"/>
+  <text x="120" y="606" text-anchor="middle" class="title">图例</text>
+  <rect x="46" y="620" width="20" height="14" class="gpuBox"/><text x="74" y="632" class="small">GPU 计算（绿）</text>
+  <rect x="46" y="646" width="20" height="14" class="cpuBox"/><text x="74" y="658" class="small">CPU 计算（橙）</text>
+  <rect x="46" y="672" width="20" height="14" class="ioBox"/><text x="74" y="684" class="small">输入 / 输出（蓝）</text>
+  <rect x="46" y="698" width="20" height="14" class="prepBox"/><text x="74" y="710" class="small">离线准备（粉）</text>
+  <path d="M46 734 H66" stroke="#c62828" stroke-width="2" stroke-dasharray="5,3"/><text x="74" y="738" class="small">Host→Device 拷贝</text>
+  <text x="46" y="768" class="small" fill="#1b5e20">核心思想：</text>
+  <text x="46" y="788" class="small">多进程绕 GIL + MPS 共享卡</text>
+  <text x="46" y="808" class="small">帧全程驻留 GPU，仅结果回 CPU</text>
+  <text x="46" y="828" class="small">推理 batch=1，进程数换并发</text>
+  <text x="46" y="848" class="small">实测 RTX 3060 可并发 16 路</text>
 </svg>
