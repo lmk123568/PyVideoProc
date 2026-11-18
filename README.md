@@ -123,6 +123,8 @@ nvidia-cuda-mps-control -d
 python main.py
 ```
 
+建议通过 AI 理解整体架构思路，并结合自身业务进行定制化实现
+
 ## Benchmark
 
 测试日期: 2026-01-25
