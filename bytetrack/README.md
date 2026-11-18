@@ -2,6 +2,8 @@
 
 匹配顺序、状态机和阈值不变，只把【逐条目标的 Python 循环 + 小数组运算】换成【整批 numpy 运算】，输出与原版逐帧一致（误差差 2e-3），测试加速 1.5 ~ 2.1 倍
 
+如果在多进程单线程架构，建议关掉 OpenBlas 多线程
+
 原版：[Fundation/ByteTrack](https://github.com/FoundationVision/ByteTrack)
 
 **快速开始**
