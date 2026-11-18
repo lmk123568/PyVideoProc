@@ -13,7 +13,7 @@ pip install numpy lap
 ```python
 from bytetrack.fast_byte_tracker import FastByteTracker
 
-tracker = ByteTracker(
+tracker = FastByteTracker(
     frame_rate=30,         # 推理帧率
     track_thresh=0.5,      # 高低分分界
     track_buffer=30,       # 丢失后保留帧数
