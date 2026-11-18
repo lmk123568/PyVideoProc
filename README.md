@@ -1,28 +1,19 @@
-<p style="" align="center">
-  <img src="./assets/logo.png" alt="Logo" width="20%">
-</p>
-<h1 align="center">PyVideoProc</h1>
-<p style="margin:0px" align="center">
-    <img src="https://img.shields.io/badge/PyTorch-2.7-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white">
-    <img src="https://img.shields.io/badge/CUDA-12.8-76B900?&logo=nvidia&logoColor=white&style=for-the-badge">
-    <img src="https://img.shields.io/badge/TensorRT-10.9-76B900?style=for-the-badge&logo=nvidia&logoColor=white">
-    <img src="https://img.shields.io/badge/license-BSD--2-blue.svg?&logo=c&logoColor=white&style=for-the-badge">
-</p>
-
+<p style="" align="center">   <img src="./assets/logo.png" alt="Logo" width="20%"> </p> <h1 align="center">PyVideoProc</h1> <p style="margin:0px" align="center">     <img src="https://img.shields.io/badge/PyTorch-2.7-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white">     <img src="https://img.shields.io/badge/CUDA-12.8-76B900?&logo=nvidia&logoColor=white&style=for-the-badge">     <img src="https://img.shields.io/badge/TensorRT-10.9-76B900?style=for-the-badge&logo=nvidia&logoColor=white">     <img src="https://img.shields.io/badge/license-BSD--2-blue.svg?&logo=c&logoColor=white&style=for-the-badge"> </p>
 
 用 Python 在 CUDA  上高效实现多路、多卡、多模型的视频流解码推理跟踪分析，并显著降低开发复杂度
 
 Effortless multi-stream, multi-GPU, multi-model video analytics on CUDA — decode, infer, track, and analyze in pure Python.
 
-RTX 3060 实现 16 路并发：
+RTX 3060 实现 16 路 25fps 并发：
 
-https://github.com/user-attachments/assets/79d92ff3-3c2d-47eb-8547-294a3b1039c4
+https://github.com/user-attachments/assets/ec090717-b9b4-4bb9-bcf6-1ce35deaa10c
 
-支持多任务：
+支持分类/检测/关键点/语义分割任务：
 
-https://github.com/user-attachments/assets/1d028214-bc72-4a95-a834-65e1d4e87324
+https://github.com/user-attachments/assets/4f8eda33-ac9c-4966-9261-db9b9217a04d
 
 核心特性：
+
 
 - 多进程 + CUDA MPS 架构，彻底绕过 GIL，CPU 占用极低
 
@@ -38,6 +29,7 @@ https://github.com/user-attachments/assets/1d028214-bc72-4a95-a834-65e1d4e87324
 
 - 开箱即部署，声明式配置，简单易懂，易于扩展
 
+竞品对比：
 
 |                                                           | Open Source |          Learning Curve          |      Developer Friendliness      | Performance |      Architecture Design       |
 | :-------------------------------------------------------: | :---------: | :------------------------------: | :------------------------------: | :---------: | :----------------------------: |
@@ -52,10 +44,6 @@ https://github.com/user-attachments/assets/1d028214-bc72-4a95-a834-65e1d4e87324
 ## Quick Start
 
 本项目推荐 Docker 容器运行开发，首先确保本地环境满足以下三个条件：
-
-- Docker >= 24.0.0
-- NVIDIA Driver >= 590
-- NVIDIA Container Toolkit >= 1.13.0
 
 ### 1. 生成镜像
 
@@ -129,7 +117,7 @@ nvidia-cuda-mps-control -d
 # echo quit | nvidia-cuda-mps-control  关闭 MPS
 ```
 
-⭐⭐⭐ 阅读理解其代码并运行
+阅读理解其代码并运行
 
 ```bash
 python main.py
@@ -144,15 +132,13 @@ python main.py
 测试任务: 4 × RTSP Decoders → YOLO26 (TensorRT) → 4 × RTMP Encoders
 
 |                           | CPU     | RAM     | GPU VRAM | **GPU-Util** |
-| ------------------------- | ------- | ------- | -------- | ------------ |
+| :------------------------ | :------ | :------ | :------- | :----------- |
 | VideoPipe（ffmpeg codec） | 511.6 % | 1.5 GiB | 2677 MiB | 16 %         |
 | Our                       | 40 %    | 1.2GiB  | 3932 MiB | 12 %         |
 
 ## Architecture
 
-<p style="margin: 10px 0px" align="center">
-  <img src="assets/pvp_architecture.svg" alt="architecture" style="width: 80%" />
-</p>
+<p style="margin: 10px 0px" align="center">   <img src="assets/pvp_architecture.svg" alt="architecture" style="width: 80%" /> </p>
 
 多进程单批推理的架构缺点是吃显存，但换来的是天级交付周期、无需专业背景的维护门槛、天然的掉线隔离，以及可预期的故障排查路径。对于摄像头频繁掉线、网络不稳定、团队技术储备有限的现场环境，这个取舍或许理论性能更优的方案更合适
 
